@@ -1,6 +1,10 @@
 import type { Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
 
+function isLikelyClapSource(source: string): boolean {
+    return /\bclap::|^\s*use\s+clap(?:::{1,2}|\s*[{;])/m.test(source);
+}
+
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -245,9 +249,14 @@ function cleanupClapImports(source: string): string {
         .replace(/\n{3,}/g, "\n\n");
 }
 
-const transform: Transform<Rust> = async (root) => {
+const transform: Transform<Rust> = async (root: any) => {
     const rootNode = root.root();
     let source = rootNode.text();
+
+    if (!isLikelyClapSource(source)) {
+        return source;
+    }
+
     const appSettingsIdentifiers = getAppSettingsIdentifiers(source);
 
     // === Derive attribute renames (text-based for spacing preservation) ===
@@ -262,7 +271,7 @@ const transform: Transform<Rust> = async (root) => {
     // and follow doc comments or other field attributes
     source = source.replace(
         /^(\s+)#\[clap\(([^)]*)\)\]/gm,
-        (match, indent, attrs) => {
+        (_match: string, indent: string, attrs: string) => {
             // Remove standalone "value_parser" and "action" from the attr list
             let cleaned = attrs
                 .replace(/,\s*value_parser\b/g, "")

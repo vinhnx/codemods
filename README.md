@@ -30,12 +30,14 @@ Keep each codemod self-contained so maintainers can validate and publish package
 
 ## Available codemods
 
+- `axum-0-7-to-0-8`: Migrate Rust `axum` route path syntax from v0.7 to v0.8 (`/:param` to `/{param}` and `/*rest` to `/{*rest}`). Registry: pending publish
 - `clap-v3-to-v4`: Migrate Rust `clap` usage from v3 to v4 (derive, builder API, and common error-kind renames). Registry: https://app.codemod.com/registry/clap-v3-to-v4
 - `rand-0-8-to-0-9`: Migrate Rust `rand` usage from v0.8 to v0.9 (`thread_rng` to `rng` and `gen*` to `random*` renames). Registry: https://app.codemod.com/registry/rand-0-8-to-0-9
 
 Run from registry:
 
 ```bash
+npx codemod run axum-0-7-to-0-8 --target /path/to/rust/project
 npx codemod run clap-v3-to-v4 --target /path/to/rust/project
 npx codemod run rand-0-8-to-0-9 --target /path/to/rust/project
 ```

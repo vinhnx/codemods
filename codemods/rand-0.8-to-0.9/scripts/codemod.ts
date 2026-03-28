@@ -1,6 +1,10 @@
 import type { Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
 
+function isLikelyRandSource(source: string): boolean {
+    return /\brand::|^\s*use\s+rand(?:::{1,2}|\s*[{;])/m.test(source);
+}
+
 function replaceMethodNames(source: string): string {
     source = source.replace(
         /\.gen_range(?=\s*(?:::<[^>]*>)?\s*\()/g,
@@ -81,9 +85,13 @@ function replaceThreadRngCalls(source: string): string {
     return source;
 }
 
-const transform: Transform<Rust> = async (root) => {
+const transform: Transform<Rust> = async (root: any) => {
     const rootNode = root.root();
     let source = rootNode.text();
+
+    if (!isLikelyRandSource(source)) {
+        return source;
+    }
 
     source = replaceThreadRngImports(source);
     source = replaceThreadRngCalls(source);

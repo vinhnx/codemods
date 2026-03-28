@@ -1,0 +1,17 @@
+{
+  "name": "axum-0-7-to-0-8",
+  "version": "1.0.0",
+  "description": "Migrate Rust axum routing path syntax from 0.7 to 0.8 for route, route_service, nest, and nest_service definitions",
+  "author": "Vinh Nguyen <vinhnguyen2308@gmail.com>",
+  "main": "scripts/codemod.ts",
+  "scripts": {
+    "test": "node scripts/codemod.ts"
+  },
+  "dependencies": {
+    "codemod:ast-grep": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
