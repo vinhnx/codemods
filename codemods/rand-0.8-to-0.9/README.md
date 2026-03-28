@@ -23,6 +23,11 @@ Automate the deterministic Rust [rand](https://github.com/rust-random/rand) migr
 - `Rng::gen_bool(...)` -> `Rng::random_bool(...)`
 - `Rng::gen_ratio(...)` -> `Rng::random_ratio(...)`
 
+### Cargo.toml dependency updates
+
+- `rand = "0.8.x"` -> `rand = "0.9"`
+- `rand = { version = "0.8.x", ... }` -> `rand = { version = "0.9", ... }`
+
 ## Usage
 
 ```bash
@@ -40,7 +45,7 @@ npx codemod@latest run rand-0-8-to-0-9 --target /path/to/your/rust/project
 
 After running, you should:
 
-1. Update `Cargo.toml` to `rand = "0.9"`
+1. Review `Cargo.toml` updates for uncommon rand dependency formatting not covered by deterministic rewrites
 2. Run `cargo check` and `cargo test`
 3. Review call sites using custom RNG traits or methods named similarly to `gen`
 4. Handle deprecations outside this codemod's deterministic rename scope
@@ -50,6 +55,7 @@ After running, you should:
 ```bash
 # Run tests
 npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+npx codemod@latest jssg test -l toml ./scripts/codemod.ts -v --strictness loose
 
 # Validate workflow
 npx codemod@latest workflow validate -w workflow.yaml

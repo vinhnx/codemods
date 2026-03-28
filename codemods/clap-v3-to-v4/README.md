@@ -27,6 +27,10 @@ Automate 80%+ of the Rust [clap](https://github.com/clap-rs/clap) CLI parser mig
 - `ErrorKind::EmptyValue` → `ErrorKind::InvalidValue`
 - `ErrorKind::UnrecognizedSubcommand` → `ErrorKind::InvalidSubcommand`
 
+### Cargo.toml dependency updates
+- `clap = "3.x"` → `clap = "4"`
+- `clap = { version = "3.x", ... }` → `clap = { version = "4", ... }`
+
 ## Usage
 
 ```bash
@@ -44,7 +48,7 @@ npx codemod@latest run clap-v3-to-v4 --target /path/to/your/rust/project
 
 After running, you should:
 
-1. **Update `Cargo.toml`** to `clap = "4"` or the appropriate v4 table form if your project still depends on v3
+1. **Review `Cargo.toml` updates** for any uncommon clap dependency formatting not covered by deterministic rewrites
 2. **Remove the `deprecated` feature flag** if present
 3. **Run `cargo check`** to catch remaining compile errors
 4. **Verify `num_args` ranges** match your intended behavior
@@ -58,6 +62,7 @@ After running, you should:
 ```bash
 # Run tests
 npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+npx codemod@latest jssg test -l toml ./scripts/codemod.ts -v --strictness loose
 
 # Validate workflow
 npx codemod@latest workflow validate -w workflow.yaml

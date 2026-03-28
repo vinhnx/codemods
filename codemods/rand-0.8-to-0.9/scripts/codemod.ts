@@ -5,6 +5,28 @@ function isLikelyRandSource(source: string): boolean {
     return /\brand::|^\s*use\s+rand(?:::{1,2}|\s*[{;])/m.test(source);
 }
 
+function isLikelyCargoToml(source: string): boolean {
+    return /^\s*\[(?:package|workspace|dependencies|dev-dependencies|build-dependencies)/m.test(
+        source,
+    );
+}
+
+function migrateRandCargoToml(source: string): string {
+    let updated = source;
+
+    updated = updated.replace(
+        /^(\s*rand\s*=\s*")0\.8(?:\.[0-9A-Za-z_.-]+)?("\s*)$/gm,
+        '$10.9$2',
+    );
+
+    updated = updated.replace(
+        /(\brand\s*=\s*\{[^\n}]*\bversion\s*=\s*")0\.8(?:\.[0-9A-Za-z_.-]+)?("[^\n}]*\})/g,
+        '$10.9$2',
+    );
+
+    return updated;
+}
+
 function replaceMethodNames(source: string): string {
     source = source.replace(
         /\.gen_range(?=\s*(?:::<[^>]*>)?\s*\()/g,
@@ -88,6 +110,10 @@ function replaceThreadRngCalls(source: string): string {
 const transform: Transform<Rust> = async (root: any) => {
     const rootNode = root.root();
     let source = rootNode.text();
+
+    if (isLikelyCargoToml(source)) {
+        return migrateRandCargoToml(source);
+    }
 
     if (!isLikelyRandSource(source)) {
         return source;

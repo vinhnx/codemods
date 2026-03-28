@@ -7,6 +7,28 @@ function isLikelyAxumSource(source: string): boolean {
     return /\baxum::|\buse\s+axum(?:::{1,2}|\s*[{;])/.test(source);
 }
 
+function isLikelyCargoToml(source: string): boolean {
+    return /^\s*\[(?:package|workspace|dependencies|dev-dependencies|build-dependencies)/m.test(
+        source,
+    );
+}
+
+function migrateAxumCargoToml(source: string): string {
+    let updated = source;
+
+    updated = updated.replace(
+        /^(\s*axum\s*=\s*")0\.7(?:\.[0-9A-Za-z_.-]+)?("\s*)$/gm,
+        '$10.8$2',
+    );
+
+    updated = updated.replace(
+        /(\baxum\s*=\s*\{[^\n}]*\bversion\s*=\s*")0\.7(?:\.[0-9A-Za-z_.-]+)?("[^\n}]*\})/g,
+        '$10.8$2',
+    );
+
+    return updated;
+}
+
 function transformRoutePath(path: string): string {
     if (!path.startsWith("/")) {
         return path;
@@ -50,6 +72,10 @@ function replaceRawRoutePaths(source: string): string {
 const transform: Transform<Rust> = async (root: any) => {
     const rootNode = root.root();
     let source = rootNode.text();
+
+    if (isLikelyCargoToml(source)) {
+        return migrateAxumCargoToml(source);
+    }
 
     if (!isLikelyAxumSource(source)) {
         return source;

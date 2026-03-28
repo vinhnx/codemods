@@ -5,6 +5,28 @@ function isLikelyClapSource(source: string): boolean {
     return /\bclap::|^\s*use\s+clap(?:::{1,2}|\s*[{;])/m.test(source);
 }
 
+function isLikelyCargoToml(source: string): boolean {
+    return /^\s*\[(?:package|workspace|dependencies|dev-dependencies|build-dependencies)/m.test(
+        source,
+    );
+}
+
+function migrateClapCargoToml(source: string): string {
+    let updated = source;
+
+    updated = updated.replace(
+        /^(\s*clap\s*=\s*")3(?:\.[0-9A-Za-z_.-]+)?("\s*)$/gm,
+        '$14$2',
+    );
+
+    updated = updated.replace(
+        /(\bclap\s*=\s*\{[^\n}]*\bversion\s*=\s*")3(?:\.[0-9A-Za-z_.-]+)?("[^\n}]*\})/g,
+        '$14$2',
+    );
+
+    return updated;
+}
+
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -252,6 +274,10 @@ function cleanupClapImports(source: string): string {
 const transform: Transform<Rust> = async (root: any) => {
     const rootNode = root.root();
     let source = rootNode.text();
+
+    if (isLikelyCargoToml(source)) {
+        return migrateClapCargoToml(source);
+    }
 
     if (!isLikelyClapSource(source)) {
         return source;

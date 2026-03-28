@@ -1,0 +1,10 @@
+[package]
+name = "demo"
+version = "0.1.0"
+
+[dependencies]
+clap = "4"
+serde = "1"
+
+[dev-dependencies]
+clap = { version = "4", features = ["derive"] }

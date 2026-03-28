@@ -11,6 +11,10 @@ nodes:
         js-ast-grep:
           js_file: scripts/codemod.ts
           language: "rust"
+      - name: "Migrate axum Cargo.toml dependency"
+        js-ast-grep:
+          js_file: scripts/codemod.ts
+          language: "toml"
       - name: "Install axum-0-7-to-0-8 skill"
         install-skill:
           package: "axum-0-7-to-0-8"

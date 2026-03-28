@@ -15,6 +15,11 @@ Automate the highest-value deterministic part of the Rust [axum](https://github.
     - `.nest_service(...)`
 - Supports normal Rust string literals and raw string literals used in those route definitions
 
+### Cargo.toml dependency updates
+
+- `axum = "0.7.x"` -> `axum = "0.8"`
+- `axum = { version = "0.7.x", ... }` -> `axum = { version = "0.8", ... }`
+
 ## Usage
 
 ```bash
@@ -32,7 +37,7 @@ npx codemod@latest run axum-0-7-to-0-8 --target /path/to/your/rust/project
 
 After running, you should:
 
-1. Update `Cargo.toml` to `axum = "0.8"`
+1. Review `Cargo.toml` updates for uncommon axum dependency formatting not covered by deterministic rewrites
 2. Review custom route strings outside `.route`, `.route_service`, `.nest`, and `.nest_service`
 3. Check code using `Option<Path<T>>` or other optional extractors for behavior changes in axum 0.8
 4. Review custom `FromRequest` and `FromRequestParts` implementations if they rely on `#[async_trait]`
@@ -43,6 +48,7 @@ After running, you should:
 ```bash
 # Run tests
 npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+npx codemod@latest jssg test -l toml ./scripts/codemod.ts -v --strictness loose
 
 # Validate workflow
 npx codemod@latest workflow validate -w workflow.yaml
