@@ -1,4 +1,4 @@
-# # Organization Codemods
+# Organization Codemods
 
 Official codemods for your organization to help users adopt new features and handle breaking changes with less manual work.
 
@@ -28,12 +28,32 @@ codemods/<slug>/
 
 Keep each codemod self-contained so maintainers can validate and publish packages independently.
 
+## Available codemods
+
+- `clap-v3-to-v4`: Migrate Rust `clap` usage from v3 to v4 (derive, builder API, and common error-kind renames). Registry: https://app.codemod.com/registry/clap-v3-to-v4
+- `rand-0-8-to-0-9`: Migrate Rust `rand` usage from v0.8 to v0.9 (`thread_rng` to `rng` and `gen*` to `random*` renames). Registry: https://app.codemod.com/registry/rand-0-8-to-0-9
+
+Run from registry:
+
+```bash
+npx codemod run clap-v3-to-v4 --target /path/to/rust/project
+npx codemod run rand-0-8-to-0-9 --target /path/to/rust/project
+```
+
 ## Creating codemods
 
 - Scaffold new codemods with `npx codemod init`.
 - Use Codemod MCP when creating or refining codemods, especially when symbol definitions or cross-file references matter.
-- Validate package workflows with `npx codemod workflow validate codemods/<slug>/workflow.yaml`.
+- Validate package workflows with `npx codemod workflow validate -w codemods/<slug>/workflow.yaml`.
 - Run package tests from the codemod directory before publishing.
+
+Example validation + tests for one package:
+
+```bash
+cd codemods/<slug>
+npx codemod workflow validate -w workflow.yaml
+npx codemod jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+```
 
 ## Running codemods
 
@@ -53,6 +73,14 @@ npx codemod workflow run -w codemods/<slug>/workflow.yaml
 ```
 
 By default, codemods run in the current folder. Add `--target /path/to/repo` to run elsewhere.
+
+## Author note
+
+Built and maintained by Vinh Nguyen. Contributions and improvements are welcome through pull requests.
+
+## License
+
+This repository is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Publishing and contribution guidance
 

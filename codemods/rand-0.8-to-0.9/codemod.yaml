@@ -1,0 +1,25 @@
+schema_version: "1.0"
+
+name: "rand-0-8-to-0-9"
+version: "1.0.0"
+description: "Migrate Rust rand usage from 0.8 to 0.9: thread_rng to rng and gen* method renames"
+author: "Vinh Nguyen <vinhnguyen2308@gmail.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["rust"]
+
+keywords:
+  - "rust"
+  - "rand"
+  - "migration"
+  - "0.8-to-0.9"
+  - "random"
+  - "rng"
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []
