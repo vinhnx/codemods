@@ -1,0 +1,8 @@
+{
+  "name": "vinhnx-workspace",
+  "private": true,
+  "description": "Monorepo workspace for codemods",
+  "workspaces": [
+    "codemods/*"
+  ]
+}

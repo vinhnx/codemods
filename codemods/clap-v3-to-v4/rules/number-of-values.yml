@@ -1,0 +1,6 @@
+id: number-of-values
+language: rust
+rule:
+  pattern: .number_of_values($N)
+fix: .num_args($N)
+message: "Replace .number_of_values(N) with .num_args(N) (clap v3→v4)"

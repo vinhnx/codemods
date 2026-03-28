@@ -1,0 +1,6 @@
+id: empty-value-error
+language: rust
+rule:
+  pattern: ErrorKind::EmptyValue
+fix: ErrorKind::InvalidValue
+message: "Rename ErrorKind::EmptyValue to ErrorKind::InvalidValue (clap v3→v4)"

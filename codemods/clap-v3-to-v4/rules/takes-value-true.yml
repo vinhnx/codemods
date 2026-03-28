@@ -1,0 +1,6 @@
+id: takes-value-true
+language: rust
+rule:
+  pattern: .takes_value(true)
+fix: .num_args(1)
+message: "Replace .takes_value(true) with .num_args(1) (clap v3→v4)"

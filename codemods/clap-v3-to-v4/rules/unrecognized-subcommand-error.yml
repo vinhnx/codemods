@@ -1,0 +1,6 @@
+id: unrecognized-subcommand-error
+language: rust
+rule:
+  pattern: ErrorKind::UnrecognizedSubcommand
+fix: ErrorKind::InvalidSubcommand
+message: "Rename ErrorKind::UnrecognizedSubcommand to ErrorKind::InvalidSubcommand (clap v3→v4)"

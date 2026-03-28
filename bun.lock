@@ -1,0 +1,24 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "vinhnx-workspace",
+    },
+    "codemods/vinhnx": {
+      "name": "vinhnx",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@codemod.com/jssg-types": "latest",
+        "typescript": "latest",
+      },
+    },
+  },
+  "packages": {
+    "@codemod.com/jssg-types": ["@codemod.com/jssg-types@1.5.1", "", {}, "sha512-pCngSoz7hpNiMMkoVi+b4uqy7cA2XuJqEaOx52KYN/25bOdzJ7IqU9DEMukOKnWyFt9iy3UBinayit1P1+9wXA=="],
+
+    "typescript": ["typescript@6.0.2", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-bGdAIrZ0wiGDo5l8c++HWtbaNCWTS4UTv7RaTH/ThVIgjkveJt83m74bBHMJkuCbslY8ixgLBVZJIOiQlQTjfQ=="],
+
+    "vinhnx": ["vinhnx@workspace:codemods/vinhnx"],
+  }
+}

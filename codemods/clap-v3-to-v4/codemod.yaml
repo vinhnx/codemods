@@ -1,0 +1,27 @@
+schema_version: "1.0"
+
+name: "clap-v3-to-v4"
+version: "1.0.3"
+description: "Migrate Rust clap CLI parser from v3 to v4: derive/value enum renames, builder API updates to num_args, ErrorKind renames, and AppSettings cleanup"
+author: "Vinh Nguyen <vinhnguyen2308@gmail.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["rust"]
+
+keywords:
+  - "rust"
+  - "clap"
+  - "cli"
+  - "migration"
+  - "v3-to-v4"
+  - "argument-parser"
+  - "derive"
+  - "builder"
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []

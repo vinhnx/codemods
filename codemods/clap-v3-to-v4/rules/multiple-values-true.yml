@@ -1,0 +1,6 @@
+id: multiple-values-true
+language: rust
+rule:
+  pattern: .multiple_values(true)
+fix: .num_args(1..)
+message: "Replace .multiple_values(true) with .num_args(1..) (clap v3→v4)"

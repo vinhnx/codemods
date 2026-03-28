@@ -1,0 +1,6 @@
+id: min-values
+language: rust
+rule:
+  pattern: .min_values($N)
+fix: .num_args($N..)
+message: "Replace .min_values(N) with .num_args(N..) (clap v3→v4)"

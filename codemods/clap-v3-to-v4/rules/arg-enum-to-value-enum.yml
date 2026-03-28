@@ -1,0 +1,9 @@
+id: arg-enum-to-value-enum
+language: rust
+rule:
+  pattern: arg_enum
+  kind: identifier
+  inside:
+    kind: attribute_item
+fix: value_enum
+message: "Rename arg_enum to value_enum (clap v3→v4)"

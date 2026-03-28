@@ -1,0 +1,10 @@
+id: derive-clap-to-arg
+language: rust
+rule:
+  pattern: "#[clap($$$ATTRS)]"
+  inside:
+    kind: attribute_item
+    inside:
+      kind: field_declaration
+fix: "#[arg($$$ATTRS)]"
+message: "Migrate #[clap(...)] to #[arg(...)] on fields (clap v3→v4)"

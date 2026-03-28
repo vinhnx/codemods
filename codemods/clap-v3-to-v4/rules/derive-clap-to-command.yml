@@ -1,0 +1,12 @@
+id: derive-clap-to-command
+language: rust
+rule:
+  pattern: "#[clap($$$ATTRS)]"
+  inside:
+    kind: attribute_item
+    inside:
+      any:
+        - kind: struct_item
+        - kind: enum_item
+fix: "#[command($$$ATTRS)]"
+message: "Migrate #[clap(...)] to #[command(...)] on struct/enum (clap v3→v4)"
