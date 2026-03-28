@@ -30,7 +30,7 @@ Keep each codemod self-contained so maintainers can validate and publish package
 
 ## Available codemods
 
-- `axum-0-7-to-0-8`: Migrate Rust `axum` route path syntax from v0.7 to v0.8 (`/:param` to `/{param}` and `/*rest` to `/{*rest}`), plus common `Cargo.toml` dependency bump patterns. Registry: pending publish
+- `axum-0-7-to-0-8`: Migrate Rust `axum` route path syntax from v0.7 to v0.8 (`/:param` to `/{param}` and `/*rest` to `/{*rest}`), plus common `Cargo.toml` dependency bump patterns. Registry: https://app.codemod.com/registry/axum-0-7-to-0-8
 - `clap-v3-to-v4`: Migrate Rust `clap` usage from v3 to v4 (derive, builder API, error-kind renames, and common `Cargo.toml` dependency bump patterns). Registry: https://app.codemod.com/registry/clap-v3-to-v4
 - `rand-0-8-to-0-9`: Migrate Rust `rand` usage from v0.8 to v0.9 (`thread_rng` to `rng`, `gen*` to `random*`, and common `Cargo.toml` dependency bump patterns). Registry: https://app.codemod.com/registry/rand-0-8-to-0-9
 
