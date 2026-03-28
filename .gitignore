@@ -33,6 +33,6 @@ Thumbs.db
 *.tgz
 
 .vtcode/
-
+.claude/
 CLAUDE.local.md
 AGENTS.local.md
