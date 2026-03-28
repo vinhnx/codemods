@@ -30,6 +30,9 @@ Thumbs.db
 
 # Package bundles
 *.tar.gz
-*.tgz 
+*.tgz
 
 .vtcode/
+
+CLAUDE.local.md
+AGENTS.local.md
