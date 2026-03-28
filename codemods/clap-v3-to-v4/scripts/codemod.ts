@@ -2,331 +2,355 @@ import type { Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function getAppSettingsIdentifiers(source: string): string[] {
-  const identifiers = new Set<string>();
+    const identifiers = new Set<string>();
 
-  const directImportPattern =
-    /use\s+clap::AppSettings(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?;/g;
+    const directImportPattern =
+        /use\s+clap::AppSettings(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?;/g;
 
-  for (const match of source.matchAll(directImportPattern)) {
-    identifiers.add(match[1] ?? "AppSettings");
-  }
-
-  const groupedImportPattern = /use\s+clap::\{([^}]*)\};/g;
-  for (const match of source.matchAll(groupedImportPattern)) {
-    const imports = match[1]
-      .split(",")
-      .map((entry) => entry.trim())
-      .filter((entry) => entry.length > 0);
-
-    for (const entry of imports) {
-      const appSettingsMatch = entry.match(
-        /^AppSettings(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/,
-      );
-
-      if (appSettingsMatch) {
-        identifiers.add(appSettingsMatch[1] ?? "AppSettings");
-      }
+    for (const match of source.matchAll(directImportPattern)) {
+        identifiers.add(match[1] ?? "AppSettings");
     }
-  }
 
-  return [...identifiers];
+    const groupedImportPattern = /use\s+clap::\{([^}]*)\};/g;
+    for (const match of source.matchAll(groupedImportPattern)) {
+        const imports = match[1]
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter((entry) => entry.length > 0);
+
+        for (const entry of imports) {
+            const appSettingsMatch = entry.match(
+                /^AppSettings(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/,
+            );
+
+            if (appSettingsMatch) {
+                identifiers.add(appSettingsMatch[1] ?? "AppSettings");
+            }
+        }
+    }
+
+    return [...identifiers];
 }
 
 function parseNumArgsExpression(line: string): {
-  kind: "exact" | "range";
-  lower: number;
-  upper?: number;
+    kind: "exact" | "range";
+    lower: number;
+    upper?: number;
 } | null {
-  const match = line.match(/\.num_args\(([^)]+)\)/);
-  if (!match) {
-    return null;
-  }
+    const match = line.match(/\.num_args\(([^)]+)\)/);
+    if (!match) {
+        return null;
+    }
 
-  const value = match[1].trim();
+    const value = match[1].trim();
 
-  if (/^\d+$/.test(value)) {
-    return { kind: "exact", lower: Number(value) };
-  }
+    if (/^\d+$/.test(value)) {
+        return { kind: "exact", lower: Number(value) };
+    }
 
-  const ranged = value.match(/^(\d+)\.\.(?:=(\d+))?$/);
-  if (!ranged) {
-    return null;
-  }
+    const ranged = value.match(/^(\d+)\.\.(?:=(\d+))?$/);
+    if (!ranged) {
+        return null;
+    }
 
-  const lower = Number(ranged[1]);
-  const upper = ranged[2] ? Number(ranged[2]) : undefined;
+    const lower = Number(ranged[1]);
+    const upper = ranged[2] ? Number(ranged[2]) : undefined;
 
-  return { kind: "range", lower, upper };
+    return { kind: "range", lower, upper };
 }
 
 function parseNumArgsPlaceholder(line: string): {
-  kind: "exact" | "min" | "max";
-  value: number;
+    kind: "exact" | "min" | "max";
+    value: number;
 } | null {
-  const exact = line.match(/\.__codemod_num_args_exact\((\d+)\)/);
-  if (exact) {
-    return { kind: "exact", value: Number(exact[1]) };
-  }
+    const exact = line.match(/\.__codemod_num_args_exact\((\d+)\)/);
+    if (exact) {
+        return { kind: "exact", value: Number(exact[1]) };
+    }
 
-  const min = line.match(/\.__codemod_num_args_min\((\d+)\)/);
-  if (min) {
-    return { kind: "min", value: Number(min[1]) };
-  }
+    const min = line.match(/\.__codemod_num_args_min\((\d+)\)/);
+    if (min) {
+        return { kind: "min", value: Number(min[1]) };
+    }
 
-  const max = line.match(/\.__codemod_num_args_max\((\d+)\)/);
-  if (max) {
-    return { kind: "max", value: Number(max[1]) };
-  }
+    const max = line.match(/\.__codemod_num_args_max\((\d+)\)/);
+    if (max) {
+        return { kind: "max", value: Number(max[1]) };
+    }
 
-  return null;
+    return null;
 }
 
 function formatNumArgsExpression(lower: number, upper?: number): string {
-  if (upper === undefined) {
-    return `${lower}..`;
-  }
+    if (upper === undefined) {
+        return `${lower}..`;
+    }
 
-  if (lower === upper) {
-    return `${lower}`;
-  }
+    if (lower === upper) {
+        return `${lower}`;
+    }
 
-  return `${lower}..=${upper}`;
+    return `${lower}..=${upper}`;
 }
 
 function collapseNumArgsChains(source: string): string {
-  return source.replace(
-    /((?:\n[ \t]*\.[A-Za-z_][A-Za-z0-9_]*\([^()\n]*\))+)/g,
-    (chain) => {
-      const lines = chain.split("\n");
-      const cardinalityLines: Array<{ index: number; line: string }> = [];
-      let sawPlaceholder = false;
-      let exactValue: number | undefined;
-      let lowerBound: number | undefined;
-      let upperBound: number | undefined;
+    return source.replace(
+        /((?:\n[ \t]*\.[A-Za-z_][A-Za-z0-9_]*\([^()\n]*\))+)/g,
+        (chain) => {
+            const lines = chain.split("\n");
+            const cardinalityLines: Array<{ index: number; line: string }> = [];
+            let sawPlaceholder = false;
+            let exactValue: number | undefined;
+            let lowerBound: number | undefined;
+            let upperBound: number | undefined;
 
-      for (let index = 0; index < lines.length; index += 1) {
-        const line = lines[index];
-        const placeholder = parseNumArgsPlaceholder(line);
-        if (!placeholder && !line.includes(".num_args(")) {
-          continue;
-        }
+            for (let index = 0; index < lines.length; index += 1) {
+                const line = lines[index];
+                const placeholder = parseNumArgsPlaceholder(line);
+                if (!placeholder && !line.includes(".num_args(")) {
+                    continue;
+                }
 
-        cardinalityLines.push({ index, line });
+                cardinalityLines.push({ index, line });
 
-        if (placeholder) {
-          sawPlaceholder = true;
-          if (placeholder.kind === "exact") {
-            exactValue = placeholder.value;
-            continue;
-          }
+                if (placeholder) {
+                    sawPlaceholder = true;
+                    if (placeholder.kind === "exact") {
+                        exactValue = placeholder.value;
+                        continue;
+                    }
 
-          if (placeholder.kind === "min") {
-            lowerBound =
-              lowerBound === undefined
-                ? placeholder.value
-                : Math.max(lowerBound, placeholder.value);
-            continue;
-          }
+                    if (placeholder.kind === "min") {
+                        lowerBound =
+                            lowerBound === undefined
+                                ? placeholder.value
+                                : Math.max(lowerBound, placeholder.value);
+                        continue;
+                    }
 
-          upperBound =
-            upperBound === undefined
-              ? placeholder.value
-              : Math.min(upperBound, placeholder.value);
-          continue;
-        }
+                    upperBound =
+                        upperBound === undefined
+                            ? placeholder.value
+                            : Math.min(upperBound, placeholder.value);
+                    continue;
+                }
 
-        const parsed = parseNumArgsExpression(line);
-        if (!parsed) {
-          continue;
-        }
+                const parsed = parseNumArgsExpression(line);
+                if (!parsed) {
+                    continue;
+                }
 
-        if (parsed.kind === "exact") {
-          exactValue = parsed.lower;
-          continue;
-        }
+                if (parsed.kind === "exact") {
+                    exactValue = parsed.lower;
+                    continue;
+                }
 
-        lowerBound =
-          lowerBound === undefined
-            ? parsed.lower
-            : Math.max(lowerBound, parsed.lower);
+                lowerBound =
+                    lowerBound === undefined
+                        ? parsed.lower
+                        : Math.max(lowerBound, parsed.lower);
 
-        if (parsed.upper !== undefined) {
-          upperBound =
-            upperBound === undefined
-              ? parsed.upper
-              : Math.min(upperBound, parsed.upper);
-        }
-      }
+                if (parsed.upper !== undefined) {
+                    upperBound =
+                        upperBound === undefined
+                            ? parsed.upper
+                            : Math.min(upperBound, parsed.upper);
+                }
+            }
 
-      if (cardinalityLines.length === 0) {
-        return chain;
-      }
+            if (cardinalityLines.length === 0) {
+                return chain;
+            }
 
-      if (lowerBound === undefined && upperBound !== undefined) {
-        lowerBound = 1;
-      }
+            if (lowerBound === undefined && upperBound !== undefined) {
+                lowerBound = 1;
+            }
 
-      if (cardinalityLines.length === 1 && !sawPlaceholder) {
-        return chain;
-      }
+            if (cardinalityLines.length === 1 && !sawPlaceholder) {
+                return chain;
+            }
 
-      const lastNumArgsIndex = cardinalityLines[cardinalityLines.length - 1].index;
+            const lastNumArgsIndex =
+                cardinalityLines[cardinalityLines.length - 1].index;
 
-      let replacement = cardinalityLines[cardinalityLines.length - 1].line;
-      if (exactValue !== undefined) {
-        replacement = replacement.replace(
-          /\.(?:num_args|__codemod_num_args_exact|__codemod_num_args_min|__codemod_num_args_max)\([^)]+\)/,
-          `.num_args(${exactValue})`,
-        );
-      } else if (lowerBound !== undefined) {
-        replacement = replacement.replace(
-          /\.(?:num_args|__codemod_num_args_exact|__codemod_num_args_min|__codemod_num_args_max)\([^)]+\)/,
-          `.num_args(${formatNumArgsExpression(lowerBound, upperBound)})`,
-        );
-      }
+            let replacement =
+                cardinalityLines[cardinalityLines.length - 1].line;
+            if (exactValue !== undefined) {
+                replacement = replacement.replace(
+                    /\.(?:num_args|__codemod_num_args_exact|__codemod_num_args_min|__codemod_num_args_max)\([^)]+\)/,
+                    `.num_args(${exactValue})`,
+                );
+            } else if (lowerBound !== undefined) {
+                replacement = replacement.replace(
+                    /\.(?:num_args|__codemod_num_args_exact|__codemod_num_args_min|__codemod_num_args_max)\([^)]+\)/,
+                    `.num_args(${formatNumArgsExpression(lowerBound, upperBound)})`,
+                );
+            }
 
-      const rebuiltLines: string[] = [];
-      for (let index = 0; index < lines.length; index += 1) {
-        const line = lines[index];
-        const hasCardinalityCall =
-          line.includes(".num_args(") ||
-          line.includes(".__codemod_num_args_exact(") ||
-          line.includes(".__codemod_num_args_min(") ||
-          line.includes(".__codemod_num_args_max(");
+            const rebuiltLines: string[] = [];
+            for (let index = 0; index < lines.length; index += 1) {
+                const line = lines[index];
+                const hasCardinalityCall =
+                    line.includes(".num_args(") ||
+                    line.includes(".__codemod_num_args_exact(") ||
+                    line.includes(".__codemod_num_args_min(") ||
+                    line.includes(".__codemod_num_args_max(");
 
-        if (!hasCardinalityCall) {
-          rebuiltLines.push(line);
-          continue;
-        }
+                if (!hasCardinalityCall) {
+                    rebuiltLines.push(line);
+                    continue;
+                }
 
-        if (index === lastNumArgsIndex) {
-          rebuiltLines.push(replacement);
-        }
-      }
+                if (index === lastNumArgsIndex) {
+                    rebuiltLines.push(replacement);
+                }
+            }
 
-      return rebuiltLines.join("\n");
-    },
-  );
+            return rebuiltLines.join("\n");
+        },
+    );
 }
 
 function cleanupClapImports(source: string): string {
-  const cleanedBraceImports = source.replace(
-    /use\s+clap::\{([^}]*)\};/g,
-    (statement, imports) => {
-      if (!imports.includes("AppSettings")) {
-        return statement;
-      }
+    const cleanedBraceImports = source.replace(
+        /use\s+clap::\{([^}]*)\};/g,
+        (statement, imports) => {
+            if (!imports.includes("AppSettings")) {
+                return statement;
+            }
 
-      const cleanedImports = imports
-        .split(",")
-        .map((entry: string) => entry.trim())
-        .filter(
-          (entry: string) =>
-            entry.length > 0 && !/^AppSettings(?:\s+as\s+\w+)?$/.test(entry),
-        );
+            const cleanedImports = imports
+                .split(",")
+                .map((entry: string) => entry.trim())
+                .filter(
+                    (entry: string) =>
+                        entry.length > 0 &&
+                        !/^AppSettings(?:\s+as\s+\w+)?$/.test(entry),
+                );
 
-      if (cleanedImports.length === 0) {
-        return "";
-      }
+            if (cleanedImports.length === 0) {
+                return "";
+            }
 
-      return `use clap::{${cleanedImports.join(", ")}};`;
-    },
-  );
+            return `use clap::{${cleanedImports.join(", ")}};`;
+        },
+    );
 
-  return cleanedBraceImports
-    .replace(/^\s*use\s+clap::AppSettings(?:\s+as\s+\w+)?;\s*\n?/gm, "")
-    .replace(/\n{3,}/g, "\n\n");
+    return cleanedBraceImports
+        .replace(/^\s*use\s+clap::AppSettings(?:\s+as\s+\w+)?;\s*\n?/gm, "")
+        .replace(/\n{3,}/g, "\n\n");
 }
 
 const transform: Transform<Rust> = async (root) => {
-  const rootNode = root.root();
-  let source = rootNode.text();
-  const appSettingsIdentifiers = getAppSettingsIdentifiers(source);
+    const rootNode = root.root();
+    let source = rootNode.text();
+    const appSettingsIdentifiers = getAppSettingsIdentifiers(source);
 
-  // === Derive attribute renames (text-based for spacing preservation) ===
+    // === Derive attribute renames (text-based for spacing preservation) ===
 
-  // #[clap(...)] on fields → #[arg(...)]
-  // #[clap(...)] on structs/enums → #[command(...)]
-  // We distinguish by context: if preceded by field-like indentation (inside struct body),
-  // it's a field attribute. Otherwise it's a struct/enum-level attribute.
+    // #[clap(...)] on fields → #[arg(...)]
+    // #[clap(...)] on structs/enums → #[command(...)]
+    // We distinguish by context: if preceded by field-like indentation (inside struct body),
+    // it's a field attribute. Otherwise it's a struct/enum-level attribute.
 
-  // First, rename field-level #[clap(...)] → #[arg(...)]
-  // Field attributes are typically indented more (inside struct/enum body)
-  // and follow doc comments or other field attributes
-  source = source.replace(
-    /^(\s+)#\[clap\(([^)]*)\)\]/gm,
-    (match, indent, attrs) => {
-      // Remove standalone "value_parser" and "action" from the attr list
-      let cleaned = attrs
-        .replace(/,\s*value_parser\b/g, "")
-        .replace(/\bvalue_parser\s*,\s*/g, "")
-        .replace(/,\s*action\b(?!\s*=)/g, "")
-        .replace(/\baction\s*,\s*(?!=)/g, "");
-      const trimmed = cleaned.trim();
-      if (trimmed === "value_parser" || trimmed === "action") {
-        return ""; // Remove entire attribute
-      }
-      return `${indent}#[arg(${cleaned})]`;
-    },
-  );
+    // First, rename field-level #[clap(...)] → #[arg(...)]
+    // Field attributes are typically indented more (inside struct/enum body)
+    // and follow doc comments or other field attributes
+    source = source.replace(
+        /^(\s+)#\[clap\(([^)]*)\)\]/gm,
+        (match, indent, attrs) => {
+            // Remove standalone "value_parser" and "action" from the attr list
+            let cleaned = attrs
+                .replace(/,\s*value_parser\b/g, "")
+                .replace(/\bvalue_parser\s*,\s*/g, "")
+                .replace(/,\s*action\b(?!\s*=)/g, "")
+                .replace(/\baction\s*,\s*(?!=)/g, "");
+            const trimmed = cleaned.trim();
+            if (trimmed === "value_parser" || trimmed === "action") {
+                return ""; // Remove entire attribute
+            }
+            return `${indent}#[arg(${cleaned})]`;
+        },
+    );
 
-  // Then rename struct/enum-level #[clap(...)] → #[command(...)]
-  // These are at the top level (no leading whitespace, or minimal)
-  source = source.replace(
-    /^#\[clap\(([^)]*)\)\]/gm,
-    "#[command($1)]",
-  );
+    // Then rename struct/enum-level #[clap(...)] → #[command(...)]
+    // These are at the top level (no leading whitespace, or minimal)
+    source = source.replace(/^#\[clap\(([^)]*)\)\]/gm, "#[command($1)]");
 
-  // Clean up lines that became empty from removed attributes
-  source = source.replace(/^\s*\n(?=\s*\n)/gm, "");
+    // Clean up lines that became empty from removed attributes
+    source = source.replace(/^\s*\n(?=\s*\n)/gm, "");
 
-  // === Builder API method renames (text-based) ===
+    // === Builder API method renames (text-based) ===
 
-  source = source.replace(/\.takes_value\(true\)/g, ".__codemod_num_args_min(1)");
-  source = source.replace(/\n\s*\.takes_value\(false\)/g, "");
-  source = source.replace(/\.takes_value\(false\)/g, "");
-  source = source.replace(/\.multiple_values\(true\)/g, ".__codemod_num_args_min(1)");
-  source = source.replace(/\.multiple\(true\)/g, ".__codemod_num_args_min(1)");
-  source = source.replace(/\.min_values\((\d+)\)/g, ".__codemod_num_args_min($1)");
-  source = source.replace(/\.max_values\((\d+)\)/g, ".__codemod_num_args_max($1)");
-  source = source.replace(/\.number_of_values\((\d+)\)/g, ".__codemod_num_args_exact($1)");
-  // Remove .require_value_delimiter(true) — handle trailing comma on next line
-  source = source.replace(/\n\s*\.require_value_delimiter\(true\)/g, "");
-  source = source.replace(/\.require_value_delimiter\(true\)/g, "");
+    source = source.replace(
+        /\.takes_value\(true\)/g,
+        ".__codemod_num_args_min(1)",
+    );
+    source = source.replace(/\n\s*\.takes_value\(false\)/g, "");
+    source = source.replace(/\.takes_value\(false\)/g, "");
+    source = source.replace(
+        /\.multiple_values\(true\)/g,
+        ".__codemod_num_args_min(1)",
+    );
+    source = source.replace(
+        /\.multiple\(true\)/g,
+        ".__codemod_num_args_min(1)",
+    );
+    source = source.replace(
+        /\.min_values\((\d+)\)/g,
+        ".__codemod_num_args_min($1)",
+    );
+    source = source.replace(
+        /\.max_values\((\d+)\)/g,
+        ".__codemod_num_args_max($1)",
+    );
+    source = source.replace(
+        /\.number_of_values\((\d+)\)/g,
+        ".__codemod_num_args_exact($1)",
+    );
+    // Remove .require_value_delimiter(true) — handle trailing comma on next line
+    source = source.replace(/\n\s*\.require_value_delimiter\(true\)/g, "");
+    source = source.replace(/\.require_value_delimiter\(true\)/g, "");
 
-  // Remove .setting(AppSettings::ColoredHelp) and aliases imported from clap.
-  for (const identifier of appSettingsIdentifiers) {
-    const escapedIdentifier = escapeRegExp(identifier);
-    const pattern = new RegExp(`\\.setting\\(${escapedIdentifier}::ColoredHelp\\)`, "g");
-    source = source.replace(pattern, "");
-  }
+    // Remove .setting(AppSettings::ColoredHelp) and aliases imported from clap.
+    for (const identifier of appSettingsIdentifiers) {
+        const escapedIdentifier = escapeRegExp(identifier);
+        const pattern = new RegExp(
+            `\\.setting\\(${escapedIdentifier}::ColoredHelp\\)`,
+            "g",
+        );
+        source = source.replace(pattern, "");
+    }
 
-  // Clean up: remove trailing whitespace on lines where methods were removed
-  source = source.replace(/[ \t]+\n/g, "\n");
-  // Clean up: remove lines that are now just whitespace after method removal
-  source = source.replace(/\n(\s*\n){2,}/g, "\n\n");
+    // Clean up: remove trailing whitespace on lines where methods were removed
+    source = source.replace(/[ \t]+\n/g, "\n");
+    // Clean up: remove lines that are now just whitespace after method removal
+    source = source.replace(/\n(\s*\n){2,}/g, "\n\n");
 
-  // === Error kind renames ===
+    // === Error kind renames ===
 
-  source = source.replace(/ErrorKind::EmptyValue/g, "ErrorKind::InvalidValue");
-  source = source.replace(
-    /ErrorKind::UnrecognizedSubcommand/g,
-    "ErrorKind::InvalidSubcommand",
-  );
+    source = source.replace(
+        /ErrorKind::EmptyValue/g,
+        "ErrorKind::InvalidValue",
+    );
+    source = source.replace(
+        /ErrorKind::UnrecognizedSubcommand/g,
+        "ErrorKind::InvalidSubcommand",
+    );
 
-  // === ArgEnum / arg_enum → ValueEnum / value_enum ===
+    // === ArgEnum / arg_enum → ValueEnum / value_enum ===
 
-  source = source.replace(/\barg_enum\b/g, "value_enum");
-  source = source.replace(/\bArgEnum\b/g, "ValueEnum");
+    source = source.replace(/\barg_enum\b/g, "value_enum");
+    source = source.replace(/\bArgEnum\b/g, "ValueEnum");
 
-  source = collapseNumArgsChains(source);
-  source = cleanupClapImports(source);
+    source = collapseNumArgsChains(source);
+    source = cleanupClapImports(source);
 
-  return source;
+    return source;
 };
 
 export default transform;
