@@ -1,6 +1,14 @@
 ---
 name: axum-0-7-to-0-8
 description: Migrate Rust axum routing path syntax from v0.7 to v0.8. Rewrites route path parameters from colon-style (/:id) to brace-style (/{id}) and wildcard paths from /*rest to /{*rest}. Use this when a Rust project uses axum 0.7 and needs to upgrade to 0.8.
+allowed-tools:
+  - bash
+  - str_replace_based_edit_tool
+  - glob
+  - sequentialthinking
+  - task_done
+codemod-compatibility: ">=1.0.0"
+codemod-skill-version: "1.0.0"
 ---
 
 ## What this codemod does

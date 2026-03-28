@@ -11,3 +11,6 @@ nodes:
         js-ast-grep:
           js_file: scripts/codemod.ts
           language: "rust"
+      - name: "Install rand-0-8-to-0-9 skill"
+        install-skill:
+          package: "rand-0-8-to-0-9"

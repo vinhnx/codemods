@@ -11,3 +11,6 @@ nodes:
         js-ast-grep:
           js_file: scripts/codemod.ts
           language: "rust"
+      - name: "Install clap-v3-to-v4 skill"
+        install-skill:
+          package: "clap-v3-to-v4"
