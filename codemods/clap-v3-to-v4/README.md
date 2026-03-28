@@ -5,6 +5,7 @@ Automate 80%+ of the Rust [clap](https://github.com/clap-rs/clap) CLI parser mig
 ## What it does
 
 ### Derive API transforms
+
 - `#[clap(...)]` on structs/enums → `#[command(...)]`
 - `#[clap(...)]` on fields → `#[arg(...)]`
 - `arg_enum` → `value_enum`
@@ -12,6 +13,7 @@ Automate 80%+ of the Rust [clap](https://github.com/clap-rs/clap) CLI parser mig
 - Removes redundant `value_parser` and `action` attributes (implicit in v4)
 
 ### Builder API transforms
+
 - `.takes_value(true)` → `.num_args(1)`
 - `.multiple_values(true)` → `.num_args(1..)`
 - `.min_values(N)` → `.num_args(N..)`
@@ -24,10 +26,12 @@ Automate 80%+ of the Rust [clap](https://github.com/clap-rs/clap) CLI parser mig
 - Removes now-unused `AppSettings` imports when `ColoredHelp` was the only use
 
 ### Error kind renames
+
 - `ErrorKind::EmptyValue` → `ErrorKind::InvalidValue`
 - `ErrorKind::UnrecognizedSubcommand` → `ErrorKind::InvalidSubcommand`
 
 ### Cargo.toml dependency updates
+
 - `clap = "3.x"` → `clap = "4"`
 - `clap = { version = "3.x", ... }` → `clap = { version = "4", ... }`
 

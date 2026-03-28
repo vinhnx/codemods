@@ -18,12 +18,12 @@ function migrateAxumCargoToml(source: string): string {
 
     updated = updated.replace(
         /^(\s*axum\s*=\s*")0\.7(?:\.[0-9A-Za-z_.-]+)?("\s*)$/gm,
-        '$10.8$2',
+        "$10.8$2",
     );
 
     updated = updated.replace(
         /(\baxum\s*=\s*\{[^\n}]*\bversion\s*=\s*")0\.7(?:\.[0-9A-Za-z_.-]+)?("[^\n}]*\})/g,
-        '$10.8$2',
+        "$10.8$2",
     );
 
     return updated;

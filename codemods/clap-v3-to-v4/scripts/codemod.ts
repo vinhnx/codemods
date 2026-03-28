@@ -16,12 +16,12 @@ function migrateClapCargoToml(source: string): string {
 
     updated = updated.replace(
         /^(\s*clap\s*=\s*")3(?:\.[0-9A-Za-z_.-]+)?("\s*)$/gm,
-        '$14$2',
+        "$14$2",
     );
 
     updated = updated.replace(
         /(\bclap\s*=\s*\{[^\n}]*\bversion\s*=\s*")3(?:\.[0-9A-Za-z_.-]+)?("[^\n}]*\})/g,
-        '$14$2',
+        "$14$2",
     );
 
     return updated;

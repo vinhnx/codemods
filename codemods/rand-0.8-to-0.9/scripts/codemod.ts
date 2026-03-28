@@ -16,12 +16,12 @@ function migrateRandCargoToml(source: string): string {
 
     updated = updated.replace(
         /^(\s*rand\s*=\s*")0\.8(?:\.[0-9A-Za-z_.-]+)?("\s*)$/gm,
-        '$10.9$2',
+        "$10.9$2",
     );
 
     updated = updated.replace(
         /(\brand\s*=\s*\{[^\n}]*\bversion\s*=\s*")0\.8(?:\.[0-9A-Za-z_.-]+)?("[^\n}]*\})/g,
-        '$10.9$2',
+        "$10.9$2",
     );
 
     return updated;
