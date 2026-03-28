@@ -1,0 +1,68 @@
+name: Migration Recipe Quality Gate
+description: Track readiness for a production-grade migration recipe deliverable
+title: "quality-gate: <codemod-slug>"
+labels:
+  - quality-gate
+  - codemod
+body:
+  - type: input
+    id: codemod_slug
+    attributes:
+      label: Codemod slug
+      placeholder: hyper-0-14-to-1-0
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Target release version
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Migration scope
+      description: What migration is automated and for which versions
+      placeholder: Migrate library X from a.b to c.d for deterministic patterns
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Quality gate checklist
+      options:
+        - label: Pre-approved migration target confirmed
+        - label: 80%+ deterministic automation coverage demonstrated
+        - label: No-op and non-target no-op fixtures included
+        - label: Edge-case fixtures added (aliases/grouped/multiline)
+        - label: Workflow validation passed
+        - label: Fixture tests passed
+        - label: Real-repo dry-run baseline recorded
+        - label: README manual follow-up checklist completed
+        - label: Release tag plan prepared (<codemod-name>@v<version>)
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence links
+      description: Link to command output, commits, test logs, dry-runs, and release references
+      placeholder: |
+        - Validation:
+        - Tests:
+        - Baseline dry-run:
+        - Commit:
+        - Tag:
+    validations:
+      required: true
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risks and manual follow-up
+      description: Remaining migration work not automated by the codemod
+    validations:
+      required: true
