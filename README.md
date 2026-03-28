@@ -78,6 +78,10 @@ npx codemod workflow run -w codemods/<slug>/workflow.yaml
 
 By default, codemods run in the current folder. Add `--target /path/to/repo` to run elsewhere.
 
+## Case studies
+
+- [VTCode: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) - Public OSS case study showing how deterministic `rand` API rewrites reduce migration toil while leaving distribution-related edge cases for manual follow-up.
+
 ## Author note
 
 Built and maintained by Vinh Nguyen. Contributions and improvements are welcome through pull requests.
