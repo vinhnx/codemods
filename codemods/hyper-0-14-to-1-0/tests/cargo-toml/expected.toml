@@ -1,0 +1,13 @@
+[package]
+name = "demo"
+version = "0.1.0"
+
+[dependencies]
+hyper = "1"
+hyper-util = { version = "0.1", features = [
+    "client-legacy",
+    "http1",
+    "http2",
+    "tokio",
+] }
+serde = "1"

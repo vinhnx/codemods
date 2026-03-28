@@ -1,0 +1,17 @@
+{
+  "name": "hyper-0-14-to-1-0",
+  "version": "1.0.0",
+  "description": "Migrate Rust hyper legacy client imports and type paths from 0.14 to 1.x with deterministic rewrites",
+  "author": "Vinh Nguyen <vinhnguyen2308@gmail.com>",
+  "main": "scripts/codemod.ts",
+  "scripts": {
+    "test": "node scripts/codemod.ts"
+  },
+  "dependencies": {
+    "codemod:ast-grep": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

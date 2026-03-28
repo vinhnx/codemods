@@ -1,0 +1,27 @@
+schema_version: "1.0"
+
+name: "hyper-0-14-to-1-0"
+version: "1.0.0"
+description: "Migrate Rust hyper legacy client imports and type paths from 0.14 to 1.x with deterministic rewrites"
+author: "Vinh Nguyen <vinhnguyen2308@gmail.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+
+targets:
+  languages: ["rust"]
+
+keywords:
+  - "rust"
+  - "hyper"
+  - "http"
+  - "client"
+  - "web"
+  - "migration"
+  - "0.14-to-1.0"
+  - "tokio"
+
+registry:
+  access: "public"
+  visibility: "public"
+
+capabilities: []
