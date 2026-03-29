@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "tree-sitter-0-24-to-0-25"
-version: "1.0.0"
+version: "1.0.1"
 description: "Migrate Rust tree-sitter usage from 0.24 to 0.25: removed API renames, TSInput decode field, and Cargo.toml dependency bump"
 author: "Vinh Nguyen <vinhnguyen2308@gmail.com>"
 license: "MIT"

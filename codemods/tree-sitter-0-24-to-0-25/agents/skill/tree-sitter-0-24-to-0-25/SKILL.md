@@ -8,7 +8,7 @@ allowed-tools:
   - sequentialthinking
   - task_done
 codemod-compatibility: ">=1.0.0"
-codemod-skill-version: "1.1.0"
+codemod-skill-version: "1.1.1"
 ---
 
 ## What this codemod does

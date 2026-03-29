@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "axum-0-7-to-0-8"
-version: "1.0.1"
+version: "1.0.2"
 description: "Migrate Rust axum routing path syntax from 0.7 to 0.8 for route, route_service, nest, and nest_service definitions"
 author: "Vinh Nguyen <vinhnguyen2308@gmail.com>"
 license: "MIT"
