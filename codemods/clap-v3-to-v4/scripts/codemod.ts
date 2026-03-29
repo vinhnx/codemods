@@ -327,10 +327,16 @@ const transform: Transform<Rust> = async (root: any) => {
 
     const appSettingsIdentifiers = getAppSettingsIdentifiers(source);
 
-    // Build AppSettings removal regex from discovered identifiers
+    // Build AppSettings removal regex from discovered identifiers.
+    // Covers both builder method call form:   setting(AppSettings::Foo)
+    // and derive attribute key=value form:    setting = AppSettings::Foo
     const appSettingsRemovalPattern = appSettingsIdentifiers.length > 0
         ? new RegExp(
-            `(?:\\n\\s*)?,?\\s*setting\\((?:${appSettingsIdentifiers.map(escapeRegExp).join("|")})::[^)]+\\)`,
+            // method call form: setting(AppSettings::...)
+            `(?:\\n\\s*)?,?\\s*setting\\((?:${appSettingsIdentifiers.map(escapeRegExp).join("|")})::[^)]+\\)` +
+            // attribute key=value form: , setting = AppSettings::Foo or setting = AppSettings::Foo ,
+            `|,\\s*\\bsetting\\s*=\\s*(?:${appSettingsIdentifiers.map(escapeRegExp).join("|")})::\\w+` +
+            `|\\bsetting\\s*=\\s*(?:${appSettingsIdentifiers.map(escapeRegExp).join("|")})::\\w+\\s*,?`,
             "g",
         )
         : null;
@@ -419,6 +425,13 @@ const transform: Transform<Rust> = async (root: any) => {
 
     // Clean up lines that became empty from removed attributes
     source = source.replace(/^\s*\n(?=\s*\n)/gm, "");
+
+    // === takes_value attribute cleanup ===
+    // In clap v4, `takes_value` was removed from the derive attribute API.
+    // Remove `takes_value = true/false` from any #[arg(...)] or #[command(...)] attrs.
+    // Two passes handle leading-comma and trailing-comma cases.
+    source = source.replace(/,\s*\btakes_value\s*=\s*(?:true|false)\b/g, "");
+    source = source.replace(/\btakes_value\s*=\s*(?:true|false)\b\s*,?\s*/g, "");
 
     // === Builder API method renames (text-based) ===
 

@@ -4,7 +4,7 @@ import type Rust from "codemod:ast-grep/langs/rust";
 const ROUTE_METHOD_PATTERN = String.raw`((?:\.|::)(?:route|route_service|nest|nest_service)\(\s*)`;
 
 function isLikelyAxumSource(source: string): boolean {
-    return /\baxum::|\buse\s+axum(?:::{1,2}|\s*[{;])/.test(source);
+    return /\baxum::|^\s*use\s+axum(?:::{1,2}|\s*[{;])/m.test(source);
 }
 
 function isLikelyCargoToml(source: string): boolean {
