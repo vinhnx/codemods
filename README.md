@@ -22,8 +22,18 @@ Each codemod lives under `codemods/<slug>/`.
 codemods/<slug>/
   workflow.yaml
   codemod.yaml
+  package.json
+  tsconfig.json
   scripts/
   tests/
+  rules/
+  agents/skill/<slug>/
+    SKILL.md
+    references/
+  README.md
+types/
+  codemod-ast-grep.d.ts
+case-studies/
 ```
 
 Keep each codemod self-contained so maintainers can validate and publish packages independently.
@@ -37,6 +47,7 @@ Open [Codemod registry](https://app.codemod.com/registry), and search for
 - `hyper-0-14-to-1-0`: Migrate Rust `hyper` from v0.14 to v1.x with deterministic legacy client import/path rewrites. Registry: pending publish
 - `rand-0-8-to-0-9`: Migrate Rust `rand` usage from v0.8 to v0.9 (`thread_rng` to `rng`, `gen*` to `random*`, and common `Cargo.toml` dependency bump patterns). Registry: https://app.codemod.com/registry/rand-0-8-to-0-9
 - `tree-sitter-0-24-to-0-25`: Migrate Rust `tree-sitter` usage from v0.24 to v0.25 — renames `child_containing_descendant` across all call forms (Rust method, UFCS, C FFI), plus `Cargo.toml` dependency bump. Registry: pending publish
+- `ratatui-breaking-changes`: Migrate Rust `ratatui` usage across major breaking changes (v0.24–v0.30): `Frame::size`→`area`, terminal module reorganization, `Table` renames, `Spans`→`Line`, and more. Registry: pending publish
 
 Run from registry:
 
@@ -46,6 +57,7 @@ npx codemod run clap-v3-to-v4 --target /path/to/rust/project
 npx codemod run hyper-0-14-to-1-0 --target /path/to/rust/project
 npx codemod run rand-0-8-to-0-9 --target /path/to/rust/project
 npx codemod run tree-sitter-0-24-to-0-25 --target /path/to/rust/project
+npx codemod run ratatui-breaking-changes --target /path/to/rust/project
 ```
 
 ## Creating codemods
@@ -84,9 +96,10 @@ By default, codemods run in the current folder. Add `--target /path/to/repo` to 
 
 ## Case studies
 
-- [VTCode: Full Dependency Migration](case-studies/vtcode-full-migration.md) - Comprehensive end-to-end migration of VTCode across all five codemods, with use-case tables and reproduction steps.
+- [VTCode: Full Dependency Migration](case-studies/vtcode-full-migration.md) - Comprehensive end-to-end migration of VTCode across all codemods, with use-case tables and reproduction steps.
 - [VTCode: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) - How deterministic `rand` API rewrites reduce migration toil while leaving distribution-related edge cases for manual follow-up.
 - [VTCode: tree-sitter 0.24 to 0.25](case-studies/vtcode-tree-sitter-0.24-to-0.25.md) - Tree-sitter API migration with removed C API function renames across all call forms.
+- [VTCode: ratatui breaking changes](case-studies/vtcode-ratatui-breaking-changes.md) - Migrating VTCode's TUI layer from ratatui 0.28/0.29 to 0.30 with automated import path, method, and type renames.
 
 ## Author note
 
