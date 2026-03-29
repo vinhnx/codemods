@@ -1,6 +1,6 @@
 # VT Code: Full Dependency Migration with Codemods
 
-This document covers the end-to-end migration of [vinhnx/VT Code](https://github.com/vinhnx/VT Code) — a Rust terminal coding agent — across five major dependency upgrades, each automated with a dedicated codemod.
+This document covers the end-to-end migration of [vinhnx/VT Code](https://github.com/vinhnx/VTCode) — a Rust terminal coding agent — across six major dependency upgrades, each automated with a dedicated codemod.
 
 VT Code is a real product, not a migration demo. It has active releases, outside contributors, real users, and a broad feature surface: a CLI and TUI, tool execution, shell-safety controls, protocol integrations (ACP, A2A), OAuth flows, configuration layers, and a multi-crate Rust workspace spanning 17+ crates.
 
@@ -18,7 +18,7 @@ These properties make it a credible baseline for evaluating codemod quality: any
 
 VT Code uses `rand` in two locations:
 
-- **`VT Code-commons/src/slug.rs`** — slug generator for plan file names, calling `thread_rng()` and `gen_range()`
+- **`vtcode-commons/src/slug.rs`** — slug generator for plan file names, calling `thread_rng()` and `gen_range()`
 - **`tests/mock_data.rs`** — test data generators, calling `thread_rng()`, `gen_range()`, `gen_bool()`, and `sample()` from `rand::distributions`
 
 ### Use cases automated
@@ -42,7 +42,7 @@ VT Code uses `rand` in two locations:
 ### Codemod command
 
 ```bash
-npx codemod run rand-0-8-to-0-9 --target /path/to/VT Code
+npx codemod@latest run rand-0-8-to-0-9 --target /path/to/vtcode
 ```
 
 ---
@@ -57,11 +57,11 @@ npx codemod run rand-0-8-to-0-9 --target /path/to/VT Code
 
 VT Code uses clap across multiple entry points:
 
-- **`VT Code-core/src/cli/args.rs`** — main CLI struct with subcommands, AppSettings, ArgEnum, ErrorKind handling
-- **`VT Code-core/src/a2a/cli.rs`** — A2A server CLI
-- **`VT Code-core/src/mcp/cli.rs`** — MCP server CLI
-- **`VT Code-cli/src/main.rs`** — entrypoint with rand integration
-- **`VT Code-file-search/src/main.rs`** — standalone file search CLI
+- **`vtcode-core/src/cli/args.rs`** — main CLI struct with subcommands, AppSettings, ArgEnum, ErrorKind handling
+- **`vtcode-core/src/a2a/cli.rs`** — A2A server CLI
+- **`vtcode-core/src/mcp/cli.rs`** — MCP server CLI
+- **`vtcode-cli/src/main.rs`** — entrypoint with rand integration
+- **`vtcode-file-search/src/main.rs`** — standalone file search CLI
 
 ### Use cases automated
 
@@ -88,7 +88,7 @@ VT Code uses clap across multiple entry points:
 ### Codemod command
 
 ```bash
-npx codemod run clap-v3-to-v4 --target /path/to/VT Code
+npx codemod@latest run clap-v3-to-v4 --target /path/to/vtcode
 ```
 
 ---
@@ -103,8 +103,8 @@ npx codemod run clap-v3-to-v4 --target /path/to/VT Code
 
 VT Code uses axum in two locations:
 
-- **`VT Code-auth/src/oauth_server.rs`** — OAuth callback server with parameterized provider routes
-- **`VT Code-core/src/a2a/server.rs`** — A2A agent protocol server with parameterized session routes
+- **`vtcode-auth/src/oauth_server.rs`** — OAuth callback server with parameterized provider routes
+- **`vtcode-core/src/a2a/server.rs`** — A2A agent protocol server with parameterized session routes
 
 ### Use cases automated
 
@@ -118,12 +118,14 @@ VT Code uses axum in two locations:
 
 ### Not automated (manual follow-up)
 
-- None — the axum codemod is fully deterministic for route path syntax
+- Route strings stored in variables or constants
+- Handler signature changes
+- Middleware API changes
 
 ### Codemod command
 
 ```bash
-npx codemod run axum-0-7-to-0-8 --target /path/to/VT Code
+npx codemod@latest run axum-0-7-to-0-8 --target /path/to/vtcode
 ```
 
 ---
@@ -138,8 +140,8 @@ npx codemod run axum-0-7-to-0-8 --target /path/to/VT Code
 
 VT Code uses hyper in:
 
-- **`VT Code-auth/src/oauth_server.rs`** — `hyper::Client<HttpConnector>` for OAuth token exchange
-- **`VT Code-core/src/llm/client.rs`** — legacy client type references
+- **`vtcode-auth/src/oauth_server.rs`** — `hyper::Client<HttpConnector>` for OAuth token exchange
+- **`vtcode-core/src/llm/client.rs`** — legacy client type references
 
 ### Use cases automated
 
@@ -160,7 +162,7 @@ VT Code uses hyper in:
 ### Codemod command
 
 ```bash
-npx codemod run hyper-0-14-to-1-0 --target /path/to/VT Code
+npx codemod@latest run hyper-0-14-to-1-0 --target /path/to/vtcode
 ```
 
 ---
@@ -175,9 +177,9 @@ npx codemod run hyper-0-14-to-1-0 --target /path/to/VT Code
 
 VT Code uses tree-sitter in:
 
-- **`VT Code-core/src/tools/tree_sitter_runtime.rs`** — symbol extraction with `node.child_containing_descendant()`
-- **`VT Code-core/src/tools/structural_search.rs`** — structural search
-- **`VT Code-core/build.rs`** — parser compilation
+- **`vtcode-core/src/tools/tree_sitter_runtime.rs`** — symbol extraction with `node.child_containing_descendant()`
+- **`vtcode-core/src/tools/structural_search.rs`** — structural search
+- **`vtcode-core/build.rs`** — parser compilation
 
 ### Use cases automated
 
@@ -199,41 +201,94 @@ VT Code uses tree-sitter in:
 ### Codemod command
 
 ```bash
-npx codemod run tree-sitter-0-24-to-0-25 --target /path/to/VT Code
+npx codemod@latest run tree-sitter-0-24-to-0-25 --target /path/to/vtcode
+```
+
+---
+
+## 6. ratatui 0.28/0.29 → 0.30
+
+### Library context
+
+`ratatui` is the most widely used Rust TUI library. The 0.24–0.30 migration series accumulated significant API churn: module restructuring, type renames, method signature changes, and removal of deprecated types.
+
+### VT Code usage
+
+VT Code's TUI layer spans the core presentation crate. Key patterns hit by the migration:
+
+- **`vtcode-tui/src/ui.rs`** — frame drawing using `Frame::size()`, `block::Title`, `Spans`, `Margin`, `Buffer::filled`
+- **`vtcode-tui/src/widgets/table.rs`** — Table with `highlight_style`
+- **`vtcode-tui/src/widgets/list.rs`** — List with `highlight_style` (preserved)
+- **`vtcode-tui/src/app.rs`** — terminal event loop
+
+### Use cases automated
+
+| Before | After | Version |
+|---|---|---|
+| `use ratatui::terminal::{Frame, Terminal}` | `use ratatui::{Frame, Terminal}` | v0.28 |
+| `frame.size()` | `frame.area()` | v0.28 |
+| `terminal.size()` | `terminal.area()` | v0.28 |
+| `Spans::from(...)` | `Line::from(...)` | v0.24 |
+| `use ratatui::widgets::block::{Title, Position}` | `use ratatui::widgets::TitlePosition` | v0.30 |
+| `Title::from("...")` | `Line::from("...")` | v0.30 |
+| `Position::Bottom` | `TitlePosition::Bottom` | v0.30 |
+| `.title_on_bottom()` | `.title_bottom()` | v0.27 |
+| `Table::highlight_style(...)` | `Table::row_highlight_style(...)` | v0.29 |
+| `List::highlight_style(...)` | `List::highlight_style(...)` (preserved) | — |
+| `.inner(&Margin {...})` | `.inner(Margin {...})` | v0.27 |
+| `Buffer::filled(area, &Cell::new(...))` | `Buffer::filled(area, Cell::new(...))` | v0.27 |
+| `BorderType::line_symbols(...)` | `BorderType::border_symbols(...)` | v0.24 |
+| `symbols::line::Set` | `symbols::border::Set` | v0.24 |
+| `scrollbar::{Scrollbar, Set}` | split into widget/symbols imports | v0.23 |
+| `.track_symbol("|")` | `.track_symbol(Some("|"))` | v0.23 |
+
+### Not automated (manual follow-up)
+
+- `block::Title` alignment/position chaining: `.alignment(Alignment::Center)` → `.centered()`
+- `Flex::SpaceAround` semantic behavior change → `Flex::SpaceEvenly`
+- `Backend` trait: new associated `Error` type and `clear_region` method
+- `Marker` non-exhaustive additions (wildcard arm)
+- Cargo.toml version bump
+
+### Codemod command
+
+```bash
+npx codemod@latest run ratatui-breaking-changes --target /path/to/vtcode
 ```
 
 ---
 
 ## End-to-End Results
 
-Tested against a demo project built from real VT Code patterns across all five libraries:
+Tested against demo projects built from real VT Code patterns across all six libraries:
 
-| Codemod | Files Changed | API Renames | False Positives | Tests |
-|---|---|---|---|---|
-| rand 0.8 → 0.9 | 3 | 7 | 0 | 6 |
-| clap v3 → v4 | 3 | 9+ | 0 | 13 |
-| axum 0.7 → 0.8 | 2 | 8 | 0 | 5 |
-| hyper 0.14 → 1.x | 2 | 4 | 0 | 7 |
-| tree-sitter 0.24 → 0.25 | 1 | 4 | 0 | 7 |
-| **Total** | **11** | **32+** | **0** | **38** |
+| Codemod | Tests | False Positives | Notes |
+|---|---|---|---|
+| rand 0.8 → 0.9 | 6 | 0 | non-rand `.gen()` skipped by file guard |
+| clap v3 → v4 | 13 | 0 | AppSettings, derive, builder, ErrorKind |
+| axum 0.7 → 0.8 | 5 | 0 | colon-style → brace-style paths |
+| hyper 0.14 → 1.x | 7 | 0 | Client and HttpConnector paths |
+| tree-sitter 0.24 → 0.25 | 7 | 0 | FFI + Rust method forms |
+| ratatui 0.28/0.29 → 0.30 | 11 | 0 | `frame.size()` guarded to `frame`/`terminal` receivers; `List::highlight_style` preserved |
+| **Total** | **49** | **0** | |
 
-Zero `old API` references remain in code after all five codemods run. Only code comments referencing old API names in explanatory text survive (expected — codemods don't rewrite comments).
+All workflows validate. Each codemod has a dedicated skill for post-migration AI-assisted manual follow-up.
 
 ## Reproduction
 
 ```bash
 # Validate all workflows
-for c in axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 rand-0.8-to-0.9 tree-sitter-0-24-to-0-25; do
-  npx codemod workflow validate -w codemods/$c/workflow.yaml
+for c in axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 rand-0.8-to-0.9 tree-sitter-0-24-to-0-25 ratatui-breaking-changes; do
+  cd codemods/$c && npx codemod@latest workflow validate -w workflow.yaml && cd ../..
 done
 
-# Run all tests
-for c in axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 rand-0.8-to-0-9 tree-sitter-0-24-to-0-25; do
-  cd codemods/$c && npx codemod jssg test -l rust ./scripts/codemod.ts --strictness loose && cd ../..
+# Run all test suites
+for c in axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 rand-0.8-to-0.9 tree-sitter-0-24-to-0-25 ratatui-breaking-changes; do
+  cd codemods/$c && npx codemod@latest jssg test -l rust ./scripts/codemod.ts --strictness loose && cd ../..
 done
 
 # Run against a target project
-for c in rand-0-8-to-0-9 axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 tree-sitter-0-24-to-0-25; do
-  npx codemod jssg run --language rust codemods/$c/scripts/codemod.ts --target /path/to/project --allow-dirty
+for c in rand-0-8-to-0-9 axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 tree-sitter-0-24-to-0-25 ratatui-breaking-changes; do
+  npx codemod@latest workflow run -w codemods/$c/workflow.yaml --target /path/to/project --allow-dirty
 done
 ```

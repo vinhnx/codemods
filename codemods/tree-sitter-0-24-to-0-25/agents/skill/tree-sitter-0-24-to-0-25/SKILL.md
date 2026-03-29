@@ -56,7 +56,7 @@ After running:
 
 ## Reference
 
-For the full list of manual follow-up steps, the complete change table, and a verification checklist, read `references/migration-guide.md`.
+For the full list of manual follow-up steps, the complete change table, and a verification checklist, read [`references/migration-guide.md`](references/migration-guide.md).
 
 ## Limitations
 

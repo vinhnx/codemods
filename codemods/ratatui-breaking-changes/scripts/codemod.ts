@@ -129,32 +129,22 @@ function migrateBlockTitleOnBottom(source: string): string {
 }
 
 function migrateFrameSizeToArea(source: string): string {
-    // .size() → .area() (Frame::size deprecated in v0.28)
-    // Note: this is a broad rename that also affects non-Frame .size() calls.
-    // In ratatui codebases this is overwhelmingly the right transform.
-    source = source.replace(/\.size\(\)/g, ".area()");
+    // frame.size() → frame.area() (Frame::size deprecated in v0.28)
+    // terminal.size() → terminal.area() (Terminal::size deprecated in v0.28)
+    // Only rename when the receiver is explicitly named `frame` or `terminal`
+    // to avoid false positives on Vec, String, or other .size() calls in ratatui files.
+    source = source.replace(/\b(frame|terminal)\s*\.size\(\)/g, "$1.area()");
     return source;
 }
 
 function migrateTableHighlightStyle(source: string): string {
     // Table::highlight_style → Table::row_highlight_style (v0.29)
-    // Strategy: rename .highlight_style( only when it appears on a line that also
-    // contains Table:: (as a variable type annotation or in a Table:: chain).
-    // This avoids renaming List::highlight_style which kept its name.
+    // List::highlight_style keeps its name — only Table was renamed.
     //
-    // Match: any line containing "Table" somewhere and ".highlight_style("
-    source = source.replace(
-        /^([^\n]*Table[^\n]*\.highlight_style)\(/gm,
-        "$1.row_highlight_style(",
-    );
-    // Also match chained calls where Table::new/default starts a chain and
-    // .highlight_style follows within the same statement (up to newline boundary)
-    // e.g.:
-    //   let table = Table::new(rows, widths)
-    //       .block(...)
-    //       .highlight_style(...)  ← this line doesn't contain "Table"
-    //
-    // For this case, look at chains starting from Table::new/default up to ;
+    // Match chains starting from Table::new/Table::default up to the
+    // next .highlight_style( call. [^;]*? is lazy and stops at the first
+    // .highlight_style( it finds, matching both single-line and multiline chains.
+    // [^;] matches newlines in JS, so multi-line chains are covered.
     source = source.replace(
         /(Table::(?:new|default)\([^;]*?)\.highlight_style\(/g,
         "$1.row_highlight_style(",
