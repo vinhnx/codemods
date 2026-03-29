@@ -123,6 +123,48 @@ function formatNumArgsExpression(lower: number, upper?: number): string {
     return `${lower}..=${upper}`;
 }
 
+function deduplicateErrorKindArms(source: string): string {
+    for (const variant of ["InvalidValue", "InvalidSubcommand"]) {
+        const pattern = new RegExp(
+            `^\\s*(?:(?:clap::)?)ErrorKind::${variant}\\s*=>`,
+        );
+        const lines = source.split("\n");
+        const result: string[] = [];
+        let seen = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            if (!pattern.test(line)) {
+                result.push(line);
+                continue;
+            }
+            if (!seen) {
+                seen = true;
+                result.push(line);
+                continue;
+            }
+
+            // Skip duplicate arm body (handle multiline braces)
+            let depth = 0;
+            for (const ch of line) {
+                if (ch === "{") depth++;
+                if (ch === "}") depth--;
+            }
+            while (depth > 0 && i + 1 < lines.length) {
+                i++; // skip next line
+                for (const ch of lines[i]) {
+                    if (ch === "{") depth++;
+                    if (ch === "}") depth--;
+                }
+            }
+        }
+
+        source = result.join("\n");
+    }
+    return source;
+}
+
 function collapseNumArgsChains(source: string): string {
     return source.replace(
         /((?:\n[ \t]*\.[A-Za-z_][A-Za-z0-9_]*\([^()\n]*\))+)/g,
@@ -321,35 +363,35 @@ const transform: Transform<Rust> = async (root: any) => {
 
     // === Builder API method renames (text-based) ===
 
-    source = source.replace(
-        /\.takes_value\(true\)/g,
-        ".__codemod_num_args_min(1)",
-    );
-    source = source.replace(/\n\s*\.takes_value\(false\)/g, "");
-    source = source.replace(/\.takes_value\(false\)/g, "");
-    source = source.replace(
-        /\.multiple_values\(true\)/g,
-        ".__codemod_num_args_min(1)",
-    );
-    source = source.replace(
-        /\.multiple\(true\)/g,
-        ".__codemod_num_args_min(1)",
-    );
-    source = source.replace(
-        /\.min_values\((\d+)\)/g,
-        ".__codemod_num_args_min($1)",
-    );
-    source = source.replace(
-        /\.max_values\((\d+)\)/g,
-        ".__codemod_num_args_max($1)",
-    );
-    source = source.replace(
-        /\.number_of_values\((\d+)\)/g,
-        ".__codemod_num_args_exact($1)",
-    );
-    // Remove .require_value_delimiter(true) — handle trailing comma on next line
-    source = source.replace(/\n\s*\.require_value_delimiter\(true\)/g, "");
-    source = source.replace(/\.require_value_delimiter\(true\)/g, "");
+    // Methods that produce __codemod placeholders (collapsed later)
+    for (const [method, placeholder] of [
+        ["takes_value(true)", "__codemod_num_args_min(1)"],
+        ["multiple_values(true)", "__codemod_num_args_min(1)"],
+        ["multiple(true)", "__codemod_num_args_min(1)"],
+    ]) {
+        source = source.replace(
+            new RegExp(`\\.${escapeRegExp(method)}`, "g"),
+            `.${placeholder}`,
+        );
+    }
+
+    for (const [method, placeholder] of [
+        ["min_values", "__codemod_num_args_min"],
+        ["max_values", "__codemod_num_args_max"],
+        ["number_of_values", "__codemod_num_args_exact"],
+    ]) {
+        source = source.replace(
+            new RegExp(`\\.${escapeRegExp(method)}\\((\\d+)\\)`, "g"),
+            `.${placeholder}($1)`,
+        );
+    }
+
+    // Methods to remove entirely (handle leading newline for line-removal)
+    for (const method of ["takes_value(false)", "require_value_delimiter(true)"]) {
+        const escaped = escapeRegExp(method);
+        source = source.replace(new RegExp(`\\n\\s*\\.${escaped}`, "g"), "");
+        source = source.replace(new RegExp(`\\.${escaped}`, "g"), "");
+    }
 
     // Remove all .setting(AppSettings::...) calls and aliases imported from clap.
     for (const identifier of appSettingsIdentifiers) {
@@ -378,57 +420,7 @@ const transform: Transform<Rust> = async (root: any) => {
     );
 
     // After renaming, remove duplicate match arms that resolve to the same variant.
-    // Walk lines to find arms with the same ErrorKind:: variant and remove later duplicates.
-    for (const variant of ["InvalidValue", "InvalidSubcommand"]) {
-        const armPattern = new RegExp(
-            `^(\\s*(?:(?:clap::)?)ErrorKind::${variant}\\s*=>)`,
-        );
-        const lines = source.split("\n");
-        const result: string[] = [];
-        let braceDepth = 0;
-        let inDuplicateArm = false;
-        let seenVariant = false;
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-
-            if (inDuplicateArm) {
-                // Track brace depth to know when the arm body ends
-                for (const ch of line) {
-                    if (ch === "{") braceDepth++;
-                    if (ch === "}") braceDepth--;
-                }
-                if (braceDepth <= 0) {
-                    inDuplicateArm = false;
-                    braceDepth = 0;
-                    // Skip trailing comma if present on next line
-                    continue;
-                }
-                continue;
-            }
-
-            if (armPattern.test(line)) {
-                if (seenVariant) {
-                    // This is a duplicate — start skipping
-                    inDuplicateArm = true;
-                    braceDepth = 0;
-                    for (const ch of line) {
-                        if (ch === "{") braceDepth++;
-                        if (ch === "}") braceDepth--;
-                    }
-                    if (braceDepth <= 0) {
-                        inDuplicateArm = false;
-                    }
-                    continue;
-                }
-                seenVariant = true;
-            }
-
-            result.push(line);
-        }
-
-        source = result.join("\n");
-    }
+    source = deduplicateErrorKindArms(source);
 
     // === ArgEnum / arg_enum → ValueEnum / value_enum ===
 

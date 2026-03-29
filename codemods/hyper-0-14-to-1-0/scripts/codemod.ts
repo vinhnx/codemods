@@ -1,6 +1,9 @@
 import type { Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
 
+const CLIENT_PATH = "hyper_util::client::legacy::Client";
+const CONNECTOR_PATH = "hyper_util::client::legacy::connect::HttpConnector";
+
 function isLikelyHyperSource(source: string): boolean {
     return /\bhyper::|^\s*use\s+hyper(?:::{1,2}|\s*[{;])/m.test(source);
 }
@@ -50,15 +53,13 @@ function rewriteLegacyHyperUseStatements(source: string): string {
     source = source.replace(
         /^(\s*)use\s+hyper::Client(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?;\s*$/gm,
         (_, indent: string, alias?: string) =>
-            `${indent}use hyper_util::client::legacy::Client${alias ? ` as ${alias}` : ""};`,
+            `${indent}use ${CLIENT_PATH}${alias ? ` as ${alias}` : ""};`,
     );
 
     source = source.replace(
         /^(\s*)use\s+hyper::client::(?:connect::)?HttpConnector(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?;\s*$/gm,
         (_, indent: string, alias?: string) =>
-            `${indent}use hyper_util::client::legacy::connect::HttpConnector${
-                alias ? ` as ${alias}` : ""
-            };`,
+            `${indent}use ${CONNECTOR_PATH}${alias ? ` as ${alias}` : ""};`,
     );
 
     source = source.replace(
@@ -78,9 +79,7 @@ function rewriteLegacyHyperUseStatements(source: string): string {
                 );
                 if (clientMatch) {
                     lifted.push(
-                        `use hyper_util::client::legacy::Client${
-                            clientMatch[1] ? ` as ${clientMatch[1]}` : ""
-                        };`,
+                        `use ${CLIENT_PATH}${clientMatch[1] ? ` as ${clientMatch[1]}` : ""};`,
                     );
                     continue;
                 }
@@ -90,9 +89,7 @@ function rewriteLegacyHyperUseStatements(source: string): string {
                 );
                 if (connectorMatch) {
                     lifted.push(
-                        `use hyper_util::client::legacy::connect::HttpConnector${
-                            connectorMatch[1] ? ` as ${connectorMatch[1]}` : ""
-                        };`,
+                        `use ${CONNECTOR_PATH}${connectorMatch[1] ? ` as ${connectorMatch[1]}` : ""};`,
                     );
                     continue;
                 }
@@ -118,13 +115,10 @@ function rewriteLegacyHyperUseStatements(source: string): string {
 }
 
 function rewriteLegacyHyperTypePaths(source: string): string {
-    source = source.replace(
-        /\bhyper::Client\b/g,
-        "hyper_util::client::legacy::Client",
-    );
+    source = source.replace(/\bhyper::Client\b/g, CLIENT_PATH);
     source = source.replace(
         /\bhyper::client::(?:connect::)?HttpConnector\b/g,
-        "hyper_util::client::legacy::connect::HttpConnector",
+        CONNECTOR_PATH,
     );
 
     return source;

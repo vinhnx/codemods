@@ -27,38 +27,28 @@ function migrateRandCargoToml(source: string): string {
     return updated;
 }
 
+const METHOD_LOOKAHEAD = "(?=\\s*(?:::<[^>]*>)?\\s*\\()";
+
+const RENAMES: [string, string][] = [
+    ["gen_range", "random_range"],
+    ["gen_bool", "random_bool"],
+    ["gen_ratio", "random_ratio"],
+    ["gen", "random"],
+];
+
 function replaceMethodNames(source: string): string {
-    source = source.replace(
-        /\.gen_range(?=\s*(?:::<[^>]*>)?\s*\()/g,
-        ".random_range",
-    );
-    source = source.replace(
-        /\.gen_bool(?=\s*(?:::<[^>]*>)?\s*\()/g,
-        ".random_bool",
-    );
-    source = source.replace(
-        /\.gen_ratio(?=\s*(?:::<[^>]*>)?\s*\()/g,
-        ".random_ratio",
-    );
-    source = source.replace(/\.gen(?=\s*(?:::<[^>]*>)?\s*\()/g, ".random");
-
-    source = source.replace(
-        /\b(?:(rand::)?)Rng::gen_range(?=\s*(?:::<[^>]*>)?\s*\()/g,
-        (_, prefix = "") => `${prefix}Rng::random_range`,
-    );
-    source = source.replace(
-        /\b(?:(rand::)?)Rng::gen_bool(?=\s*(?:::<[^>]*>)?\s*\()/g,
-        (_, prefix = "") => `${prefix}Rng::random_bool`,
-    );
-    source = source.replace(
-        /\b(?:(rand::)?)Rng::gen_ratio(?=\s*(?:::<[^>]*>)?\s*\()/g,
-        (_, prefix = "") => `${prefix}Rng::random_ratio`,
-    );
-    source = source.replace(
-        /\b(?:(rand::)?)Rng::gen(?=\s*(?:::<[^>]*>)?\s*\()/g,
-        (_, prefix = "") => `${prefix}Rng::random`,
-    );
-
+    for (const [old, new_] of RENAMES) {
+        // Method-call syntax: .gen() → .random()
+        source = source.replace(
+            new RegExp(`\\.${old}${METHOD_LOOKAHEAD}`, "g"),
+            `.${new_}`,
+        );
+        // UFCS syntax: Rng::gen() → Rng::random()
+        source = source.replace(
+            new RegExp(`\\b(?:(rand::)?)Rng::${old}${METHOD_LOOKAHEAD}`, "g"),
+            (_, prefix = "") => `${prefix}Rng::${new_}`,
+        );
+    }
     return source;
 }
 
