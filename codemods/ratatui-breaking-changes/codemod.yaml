@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "ratatui-breaking-changes"
-version: "1.0.0"
+version: "1.0.1"
 description: "Migrate Rust ratatui usage across major breaking changes (v0.24–v0.30): Frame::size→area, terminal module, Table renames, Spans→Line, and more"
 author: "Vinh Nguyen <vinhnguyen2308@gmail.com>"
 license: "MIT"
