@@ -60,7 +60,7 @@ fn draw_with_inner_margin(frame: &mut Frame) {
 
     let block = Block::bordered()
         .title("Editor")
-        .title_on_bottom();
+        .title_bottom();
     frame.render_widget(block, area);
 
     let content = Paragraph::new("Hello, world!");
@@ -71,7 +71,7 @@ fn draw_list(frame: &mut Frame, area: Rect) {
     let items = vec!["Item 1", "Item 2", "Item 3"];
     let list = List::new(items)
         .block(Block::bordered().title("Items"))
-        .row_highlight_style(Style::new().add_modifier(Modifier::BOLD));
+        .highlight_style(Style::new().add_modifier(Modifier::BOLD));
     frame.render_widget(list, area);
 }
 

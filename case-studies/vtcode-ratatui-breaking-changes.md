@@ -72,6 +72,8 @@ let block = Block::bordered()
 
 ### Table::highlight_style → row_highlight_style (v0.29)
 
+The codemod correctly renames only `Table::highlight_style`, preserving `List::highlight_style` which kept its original name:
+
 ```rust
 // Before
 let table = Table::new(rows, widths)
@@ -80,6 +82,20 @@ let table = Table::new(rows, widths)
 // After
 let table = Table::new(rows, widths)
     .row_highlight_style(Style::new().reversed());
+
+// List is NOT renamed
+let list = List::new(items)
+    .highlight_style(Style::new().reversed()); // unchanged
+```
+
+### title_on_bottom() → title_bottom() (v0.27)
+
+```rust
+// Before
+let block = Block::bordered().title("Title").title_on_bottom();
+
+// After
+let block = Block::bordered().title("Title").title_bottom();
 ```
 
 ### Rect::inner(&Margin{...}) → Rect::inner(Margin{...}) (v0.27)
@@ -136,7 +152,7 @@ let set: ratatui::symbols::border::Set = ...;
 
 ### 1. Title alignment/position chaining
 
-The codemod converts `Title::from(...)` to `Line::from(...)`, but the chained `.alignment(Alignment::Center)` and `.position(Position::Bottom)` methods need manual adjustment:
+The codemod converts `Title::from(...)` to `Line::from(...)`, but the chained `.alignment(Alignment::Center)` and `.position(TitlePosition::Bottom)` methods need manual adjustment:
 
 ```rust
 // Codemod output (functional but incomplete)
@@ -148,27 +164,15 @@ The codemod converts `Title::from(...)` to `Line::from(...)`, but the chained `.
 .title_bottom(Line::from(" v0.2.0"));
 ```
 
-### 2. List::highlight_style vs Table::row_highlight_style
+### 2. Cargo.toml dependency update
 
-The codemod renames all `.highlight_style()` calls to `.row_highlight_style()`. This is correct for `Table` but incorrect for `List`, which keeps `highlight_style()` as its API. List usages need manual correction:
-
-```rust
-// Codemod output (needs manual fix for List)
-list.row_highlight_style(Style::new().reversed());
-
-// Correct for List
-list.highlight_style(Style::new().reversed());
-```
-
-### 3. Cargo.toml dependency update
-
-The Cargo.toml migration is not yet supported by jssg (toml language not available). Update manually:
+Update manually:
 
 ```toml
 ratatui = "0.30"
 ```
 
-### 4. Backend trait changes (v0.30)
+### 3. Backend trait changes (v0.30)
 
 Custom backends need an associated `Error` type and `clear_region` method:
 
@@ -179,11 +183,11 @@ impl Backend for MyBackend {
 }
 ```
 
-### 5. Flex::SpaceAround behavior change
+### 4. Flex::SpaceAround behavior change
 
 If using `Flex::SpaceAround`, the behavior changed to match flexbox. Use `Flex::SpaceEvenly` for the old behavior.
 
-### 6. Marker is now non-exhaustive
+### 5. Marker is now non-exhaustive
 
 Add a wildcard arm to exhaustive Marker matches.
 
@@ -192,21 +196,23 @@ Add a wildcard arm to exhaustive Marker matches.
 ### JSSG Unit Tests
 
 ```
-running 7 tests
+running 9 tests
 test frame-size           ... ok
 test imports-terminal     ... ok
+test list-highlight-style ... ok
 test no-op                ... ok
 test rect-inner           ... ok
 test spans-removal        ... ok
 test table-highlight      ... ok
+test title-on-bottom      ... ok
 test vtcode-real-patterns ... ok
 
-test result: ok. 7 passed; 0 failed
+test result: ok. 9 passed; 0 failed
 ```
 
 ### Demo project test
 
-A standalone TUI app was created with old ratatui patterns. The codemod successfully transformed:
+A standalone TUI app with old ratatui patterns:
 
 | Pattern | Before | After |
 |---------|--------|-------|
@@ -214,24 +220,20 @@ A standalone TUI app was created with old ratatui patterns. The codemod successf
 | Spans type | `Spans::from(...)` | `Line::from(...)` |
 | Frame size | `frame.size()` | `frame.area()` |
 | Table highlight | `.highlight_style(...)` | `.row_highlight_style(...)` |
+| List highlight | `.highlight_style(...)` | `.highlight_style(...)` (preserved) |
+| title_on_bottom | `.title_on_bottom()` | `.title_bottom()` |
 | Rect inner | `.inner(&Margin{...})` | `.inner(Margin{...})` |
 | Buffer filled | `Buffer::filled(area, &Cell::new(...))` | `Buffer::filled(area, Cell::new(...))` |
 
 ### VTCode baseline project test
 
-A multi-file project simulating VT Code's TUI structure was created with:
-
-- `src/main.rs` — terminal initialization and module declarations
-- `src/app.rs` — application state and event loop
-- `src/ui.rs` — UI drawing functions with tables, lists, title blocks, margins
-
-The codemod successfully transformed all 3 files:
+A multi-file project simulating VT Code's TUI structure:
 
 | File | Changes Applied |
 |------|----------------|
 | main.rs | Terminal module import, TitlePosition import, Spans→Line |
 | app.rs | Terminal module import, TitlePosition import, Spans→Line |
-| ui.rs | frame.size→area, Title→Line, Position→TitlePosition, Spans→Line, Margin ref removal, highlight_style rename, Buffer::filled signature |
+| ui.rs | frame.size→area, Title→Line, Position→TitlePosition, Spans→Line, Margin ref removal, Table highlight_style→row_highlight_style, List highlight_style preserved, Buffer::filled signature |
 
 ## Suggested reproduction workflow
 
@@ -249,14 +251,13 @@ npx codemod@latest workflow run -w workflow.yaml --target /path/to/project --all
 ```
 
 Then manually:
-1. Fix List `.row_highlight_style` back to `.highlight_style`
-2. Clean up `Title` alignment/position chaining
-3. Update `Cargo.toml` to `ratatui = "0.30"`
-4. Handle Backend trait changes if implementing custom backends
-5. Run `cargo check` and `cargo test`
+1. Fix Title alignment/position chaining
+2. Update `Cargo.toml` to `ratatui = "0.30"`
+3. Handle Backend trait changes if implementing custom backends
+4. Run `cargo check` and `cargo test`
 
 ## Key takeaway
 
 The ratatui breaking changes codemod handles the mechanical API renames that account for the majority of the migration surface. For a TUI-heavy project like VT Code, that means the developer can focus on the smaller number of semantic adjustments (Title API, Backend trait, Flex behavior) rather than manually renaming dozens of method calls and import paths.
 
-The split is the same one that works for other Rust crate migrations: automate the rote API churn, then spend human attention on the behavior-sensitive edge cases.
+The critical improvement in this codemod is that it correctly distinguishes between `Table::highlight_style` (renamed to `row_highlight_style`) and `List::highlight_style` (kept as-is), avoiding a common false positive that would break List widgets.

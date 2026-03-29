@@ -7,9 +7,12 @@ Use this to handle everything the codemod cannot automate.
 - `ratatui = "0.2x.x"` → `ratatui = "0.30"` in Cargo.toml
 - `use ratatui::terminal::{...}` → `use ratatui::{...}`
 - `frame.size()` → `frame.area()`
-- `.highlight_style(...)` → `.row_highlight_style(...)`
+- `Table::highlight_style(...)` → `Table::row_highlight_style(...)`
+- `List::highlight_style()` is **NOT** renamed (correct behavior)
 - `Spans` → `Line`
+- `Title::from(...)` → `Line::from(...)`
 - `Position::Bottom/Top` → `TitlePosition::Bottom/Top`
+- `.title_on_bottom()` → `.title_bottom()`
 - `.inner(&Margin{...})` → `.inner(Margin{...})`
 - `Buffer::filled(area, &Cell::new(...))` → `Buffer::filled(area, Cell::new(...))`
 - `BorderType::line_symbols` → `BorderType::border_symbols`
@@ -21,7 +24,21 @@ Use this to handle everything the codemod cannot automate.
 
 ## What requires manual follow-up
 
-### 1. block::Title removal (v0.30)
+### 1. Title alignment/position chaining (v0.30)
+
+The codemod converts `Title::from(...)` to `Line::from(...)`, but chained methods need manual adjustment:
+
+```rust
+// Codemod output (functional but incomplete)
+.title(Line::from(" VT Code ").alignment(Alignment::Center))
+.title(Line::from(" v0.1.0 ").position(TitlePosition::Bottom));
+
+// Ideal manual cleanup
+.title(Line::from(" VT Code ").centered())
+.title_bottom(Line::from(" v0.1.0"));
+```
+
+### 2. block::Title removal (v0.30)
 
 `block::Title` no longer exists. Use `Line` directly with `Block::title()`:
 
@@ -36,11 +53,10 @@ let block = Block::default()
 use ratatui::widgets::TitlePosition;
 let block = Block::default()
     .title(Line::from("Hello").centered())
-    .title(Line::from("Status"))
-    .title_position(TitlePosition::Bottom);
+    .title_bottom(Line::from("Status"));
 ```
 
-### 2. Flex::SpaceAround behavior change (v0.30)
+### 3. Flex::SpaceAround behavior change (v0.30)
 
 The old `SpaceAround` behavior is now `SpaceEvenly`:
 
@@ -52,27 +68,18 @@ Layout::horizontal([Length(1), Length(2)]).flex(Flex::SpaceAround).split(area);
 Layout::horizontal([Length(1), Length(2)]).flex(Flex::SpaceEvenly).split(area);
 ```
 
-### 3. Backend trait changes (v0.30)
+### 4. Backend trait changes (v0.30)
 
 Custom backends need an associated `Error` type and `clear_region` method:
 
 ```rust
-// v0.29
-impl Backend for MyBackend {
-    fn draw<'a, I>(&mut self, content: I) -> Result<()>
-    where I: Iterator<Item = (u16, u16, &'a Cell)> { ... }
-}
-
-// v0.30
 impl Backend for MyBackend {
     type Error = std::io::Error;
-    fn draw<'a, I>(&mut self, content: I) -> Result<(), Self::Error>
-    where I: Iterator<Item = (u16, u16, &'a Cell)> { ... }
     fn clear_region(&mut self, area: Rect) -> Result<(), Self::Error> { ... }
 }
 ```
 
-### 4. Marker is now non-exhaustive (v0.30)
+### 5. Marker is now non-exhaustive (v0.30)
 
 Add a wildcard arm to exhaustive matches:
 
@@ -80,16 +87,13 @@ Add a wildcard arm to exhaustive matches:
 match marker {
     Marker::Dot => { /* ... */ }
     Marker::Block => { /* ... */ }
-    Marker::Bar => { /* ... */ }
-    Marker::Braille => { /* ... */ }
-    Marker::HalfBlock => { /* ... */ }
     _ => { /* ... */ }  // Required in v0.30
 }
 ```
 
-### 5. Style no longer implements Styled (v0.30)
+### 6. Style no longer implements Styled (v0.30)
 
-Remove `Stylize` import if no longer needed:
+Remove `Stylize` import if no longer needed for `Style` method calls:
 
 ```rust
 // v0.29
@@ -100,38 +104,23 @@ let style = Style::new().red();
 let style = Style::new().red();
 ```
 
-### 6. Layout::init_cache and feature flags (v0.30)
+### 7. Layout::init_cache and feature flags (v0.30)
 
 ```rust
 // Only available with layout-cache feature
 Layout::init_cache(NonZeroUsize::new(100).unwrap());
 ```
 
-### 7. TestBackend error type (v0.30)
+If using `default-features = false`, re-enable layout-cache:
+```toml
+ratatui = { version = "0.30", default-features = false, features = ["layout-cache"] }
+```
+
+### 8. TestBackend error type (v0.30)
 
 ```rust
-// v0.29 — uses std::io::Error
-fn test_something() -> io::Result<()> { ... }
-
 // v0.30 — TestBackend uses Infallible
 fn test_something() -> Result<(), core::convert::Infallible> { ... }
-```
-
-### 8. List::highlight_symbol accepts Into<Line> (v0.30)
-
-```rust
-// v0.29
-list.highlight_symbol(">> ");
-
-// v0.30 — still works but accepts Into<Line>
-list.highlight_symbol(">> ");
-```
-
-### 9. Feature flag changes (v0.30)
-
-```toml
-# If using default-features = false, explicitly enable layout-cache
-ratatui = { version = "0.30", default-features = false, features = ["layout-cache"] }
 ```
 
 ---
@@ -141,8 +130,11 @@ ratatui = { version = "0.30", default-features = false, features = ["layout-cach
 After running the codemod:
 - [ ] `Cargo.toml` updated to `ratatui = "0.30"`
 - [ ] Feature flags reviewed (especially `default-features = false` case)
-- [ ] `block::Title` usages converted to `Line`
+- [ ] `Title::from` alignment/position chaining cleaned up
 - [ ] `Position::Bottom/Top` → `TitlePosition::Bottom/Top`
+- [ ] `.title_on_bottom()` → `.title_bottom()`
+- [ ] `List::highlight_style()` preserved (not renamed)
+- [ ] `Table::highlight_style()` → `row_highlight_style()`
 - [ ] `Flex::SpaceAround` behavior verified
 - [ ] Custom `Backend` implementations updated with `Error` type and `clear_region`
 - [ ] `Marker` matches updated with wildcard arm
