@@ -111,6 +111,7 @@ This repository is licensed under the MIT License. See the [LICENSE](LICENSE) fi
 
 ## Publishing and contribution guidance
 
+- See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a new codemod, validate it, and prepare it for release.
 - Use the generated GitHub Actions workflow to publish after review and merge.
 - Use [CONTRIBUTION_QUALITY_GATE.md](CONTRIBUTION_QUALITY_GATE.md) as the minimum readiness checklist for production-grade migration recipes.
 - Use [MONTHLY_UPDATE_TEMPLATE.md](MONTHLY_UPDATE_TEMPLATE.md) when preparing monthly deliverable summaries.
