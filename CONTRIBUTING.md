@@ -91,13 +91,10 @@ Your `README.md` should cover:
 When adding a new codemod, also update:
 
 - **README.md** — add to "Available codemods" and run commands
-- **RELEASE_CHECKLIST.md** — add version, test, validate, and tag entries
 
 ## Quality gate
 
-Before opening a release PR, your codemod must pass the [Migration Recipe Quality Gate](CONTRIBUTION_QUALITY_GATE.md). Open a tracking issue using the [quality gate template](.github/ISSUE_TEMPLATE/migration-recipe-quality-gate.yml).
-
-Key requirements:
+Before opening a release PR, open a tracking issue using the [quality gate template](.github/ISSUE_TEMPLATE/migration-recipe-quality-gate.yml) and confirm these requirements:
 
 - Automates at least 80% of common deterministic migration patterns
 - No-op and non-target fixtures included
@@ -105,15 +102,25 @@ Key requirements:
 - Workflow validation and fixture tests pass
 - Real-repo dry-run baseline recorded
 
-See [CONTRIBUTION_QUALITY_GATE.md](CONTRIBUTION_QUALITY_GATE.md) for the full checklist.
-
 ## Releasing
 
 1. Update the version in `codemod.yaml` and `package.json`.
-2. Run all validations and tests (see [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)).
-3. Create a git tag: `git tag <codemod-slug>@v<version>`
-4. Push the tag to trigger the publish workflow: `git push origin <codemod-slug>@v<version>`
-5. Verify the package appears in the [Codemod Registry](https://app.codemod.com/registry).
+2. Run tests and validate the workflow for your codemod:
+
+```bash
+cd codemods/<slug>
+npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+npx codemod@latest workflow validate -w workflow.yaml
+```
+
+3. Create and push a git tag from the repo root:
+
+```bash
+git tag <codemod-slug>@v<version>
+git push origin <codemod-slug>@v<version>
+```
+
+4. Verify the package appears in the [Codemod Registry](https://app.codemod.com/registry).
 
 ## Case studies
 

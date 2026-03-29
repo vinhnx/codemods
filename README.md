@@ -113,7 +113,5 @@ This repository is licensed under the MIT License. See the [LICENSE](LICENSE) fi
 
 - See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a new codemod, validate it, and prepare it for release.
 - Use the generated GitHub Actions workflow to publish after review and merge.
-- Use [CONTRIBUTION_QUALITY_GATE.md](CONTRIBUTION_QUALITY_GATE.md) as the minimum readiness checklist for production-grade migration recipes.
-- Use [MONTHLY_UPDATE_TEMPLATE.md](MONTHLY_UPDATE_TEMPLATE.md) when preparing monthly deliverable summaries.
 - Open a tracking issue with the [Migration Recipe Quality Gate template](.github/ISSUE_TEMPLATE/migration-recipe-quality-gate.yml).
 - See the [Codemod docs](https://go.codemod.com/docs) for CLI and publishing details.
