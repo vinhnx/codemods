@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/codemod/codemod/refs/heads/main/schemas/workflow.json
+
+version: "1"
+
+nodes:
+  - id: jssg-apply
+    name: Transform Rust source files
+    type: automatic
+    steps:
+      - name: "Migrate tree-sitter 0.24 APIs to 0.25"
+        js-ast-grep:
+          js_file: scripts/codemod.ts
+          language: "rust"
+      - name: "Install tree-sitter-0-24-to-0-25 skill"
+        install-skill:
+          package: "tree-sitter-0-24-to-0-25"

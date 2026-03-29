@@ -1,0 +1,11 @@
+[package]
+name = "my-parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tree-sitter = "0.25"
+tree-sitter-rust = "0.21"
+
+[dev-dependencies]
+tree-sitter = { version = "0.25", features = ["wasm"] }

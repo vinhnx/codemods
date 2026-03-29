@@ -36,6 +36,7 @@ Open [Codemod registry](https://app.codemod.com/registry), and search for
 - `clap-v3-to-v4`: Migrate Rust `clap` usage from v3 to v4 (derive, builder API, error-kind renames, and common `Cargo.toml` dependency bump patterns). Registry: https://app.codemod.com/registry/clap-v3-to-v4
 - `hyper-0-14-to-1-0`: Migrate Rust `hyper` from v0.14 to v1.x with deterministic legacy client import/path rewrites. Registry: pending publish
 - `rand-0-8-to-0-9`: Migrate Rust `rand` usage from v0.8 to v0.9 (`thread_rng` to `rng`, `gen*` to `random*`, and common `Cargo.toml` dependency bump patterns). Registry: https://app.codemod.com/registry/rand-0-8-to-0-9
+- `tree-sitter-0-24-to-0-25`: Migrate Rust `tree-sitter` usage from v0.24 to v0.25 (removed API renames, `ts_node_child_containing_descendant` to `ts_node_child_with_descendant`). Registry: pending publish
 
 Run from registry:
 
@@ -44,6 +45,7 @@ npx codemod run axum-0-7-to-0-8 --target /path/to/rust/project
 npx codemod run clap-v3-to-v4 --target /path/to/rust/project
 npx codemod run hyper-0-14-to-1-0 --target /path/to/rust/project
 npx codemod run rand-0-8-to-0-9 --target /path/to/rust/project
+npx codemod run tree-sitter-0-24-to-0-25 --target /path/to/rust/project
 ```
 
 ## Creating codemods
@@ -83,6 +85,7 @@ By default, codemods run in the current folder. Add `--target /path/to/repo` to 
 ## Case studies
 
 - [VTCode: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) - Public OSS case study showing how deterministic `rand` API rewrites reduce migration toil while leaving distribution-related edge cases for manual follow-up.
+- [VTCode: tree-sitter 0.24 to 0.25](case-studies/vtcode-tree-sitter-0.24-to-0.25.md) - Case study demonstrating tree-sitter API migration with removed C API function renames and manual follow-up for deprecated Rust bindings.
 
 ## Author note
 
