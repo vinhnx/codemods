@@ -84,8 +84,9 @@ By default, codemods run in the current folder. Add `--target /path/to/repo` to 
 
 ## Case studies
 
-- [VTCode: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) - Public OSS case study showing how deterministic `rand` API rewrites reduce migration toil while leaving distribution-related edge cases for manual follow-up.
-- [VTCode: tree-sitter 0.24 to 0.25](case-studies/vtcode-tree-sitter-0.24-to-0.25.md) - Case study demonstrating tree-sitter API migration with removed C API function renames and manual follow-up for deprecated Rust bindings.
+- [VTCode: Full Dependency Migration](case-studies/vtcode-full-migration.md) - Comprehensive end-to-end migration of VTCode across all five codemods, with use-case tables and reproduction steps.
+- [VTCode: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) - How deterministic `rand` API rewrites reduce migration toil while leaving distribution-related edge cases for manual follow-up.
+- [VTCode: tree-sitter 0.24 to 0.25](case-studies/vtcode-tree-sitter-0.24-to-0.25.md) - Tree-sitter API migration with removed C API function renames across all call forms.
 
 ## Author note
 
