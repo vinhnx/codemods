@@ -1,14 +1,9 @@
 ---
 name: rand-0-8-to-0-9
 description: Migrate Rust rand crate usage from v0.8 to v0.9. Handles thread_rng → rng constructor rename and all gen* method renames. Use this when a Rust project uses rand 0.8 and needs to upgrade to 0.9.
-allowed-tools:
-  - bash
-  - str_replace_based_edit_tool
-  - glob
-  - sequentialthinking
-  - task_done
-codemod-compatibility: ">=1.0.0"
-codemod-skill-version: "1.0.3"
+compatibility: ">=1.0.0"
+metadata:
+  version: "1.0.3"
 ---
 
 ## What this codemod does
