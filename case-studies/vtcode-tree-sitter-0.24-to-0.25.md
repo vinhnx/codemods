@@ -1,12 +1,12 @@
-# Case Study: VTCode tree-sitter 0.24 → 0.25 Migration
+# Case Study: VT Code tree-sitter 0.24 → 0.25 Migration
 
 **Date:** 2026-03-29
 **Codemod:** `tree-sitter-0-24-to-0-25`
-**Project:** VTCode (simulated baseline)
+**Project:** VT Code (simulated baseline)
 
 ## Context
 
-VTCode is a code analysis engine that uses tree-sitter for parsing multiple languages (Rust, Python, JavaScript). The project was on `tree-sitter = "0.24.3"` and needed to upgrade to v0.25.0, which includes breaking API changes.
+VT Code is a code analysis engine that uses tree-sitter for parsing multiple languages (Rust, Python, JavaScript). The project was on `tree-sitter = "0.24.3"` and needed to upgrade to v0.25.0, which includes breaking API changes.
 
 ## What the codemod automated
 
@@ -57,7 +57,7 @@ These require understanding call context and were not automated.
 
 ### 3. TSInput decode field (FFI only)
 
-Projects constructing `TSInput` structs via FFI need to add the new `decode` field. VTCode does not construct `TSInput` directly, so this was not an issue.
+Projects constructing `TSInput` structs via FFI need to add the new `decode` field. VT Code does not construct `TSInput` directly, so this was not an issue.
 
 ## Verification
 
