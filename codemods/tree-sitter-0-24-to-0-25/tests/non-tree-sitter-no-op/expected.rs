@@ -1,19 +1,19 @@
+// No tree_sitter import — codemod must NOT change anything here.
 use std::collections::HashMap;
 
-struct TreeConfig {
+struct XmlNode {
     name: String,
-    children: Vec<TreeNode>,
+    children: Vec<XmlNode>,
 }
 
-struct TreeNode {
-    id: usize,
-    label: String,
-}
+impl XmlNode {
+    /// Custom traversal helper that happens to use the same method name.
+    fn child_containing_descendant(&self, tag: &str) -> Option<&XmlNode> {
+        self.children.iter().find(|c| c.name == tag)
+    }
 
-fn tree_sitter_demo() {
-    let config = TreeConfig {
-        name: "tree_sitter".to_string(),
-        children: vec![],
-    };
-    println!("{}", config.name);
+    fn ts_node_child_containing_descendant(&self, tag: &str) -> Option<&XmlNode> {
+        // same name as the C API but in an unrelated type — must not be renamed
+        self.children.iter().find(|c| c.name == tag)
+    }
 }

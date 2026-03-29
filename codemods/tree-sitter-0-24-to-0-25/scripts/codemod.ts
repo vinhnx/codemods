@@ -11,7 +11,7 @@ function isLikelyCargoToml(source: string): boolean {
     );
 }
 
-function migrateTreeSitterCargoToml(source: string): string {
+function migrateCargoToml(source: string): string {
     let updated = source;
 
     // Simple string dep: tree-sitter = "0.24.x"
@@ -26,29 +26,28 @@ function migrateTreeSitterCargoToml(source: string): string {
         "$10.25$2",
     );
 
-    // tree-sitter-language simple string dep
-    updated = updated.replace(
-        /^(\s*tree-sitter-language\s*=\s*")0\.\d+(?:\.[0-9A-Za-z_.-]+)?("\s*)$/gm,
-        "$10.1$2",
-    );
-
-    // tree-sitter-language inline table dep
-    updated = updated.replace(
-        /(\btree-sitter-language\s*=\s*\{[^\n}]*\bversion\s*=\s*")0\.\d+(?:\.[0-9A-Za-z_.-]+)?("[^\n}]*\})/g,
-        "$10.1$2",
-    );
-
     return updated;
 }
 
-const REMOVED_API_RENAMES: [string, string][] = [
-    ["ts_node_child_containing_descendant", "ts_node_child_with_descendant"],
-];
+function migrateRustSource(source: string): string {
+    // C API (FFI extern declarations and call sites):
+    //   ts_node_child_containing_descendant → ts_node_child_with_descendant
+    source = source.replace(
+        /\bts_node_child_containing_descendant\b/g,
+        "ts_node_child_with_descendant",
+    );
 
-function replaceRemovedApis(source: string): string {
-    for (const [old, new_] of REMOVED_API_RENAMES) {
-        source = source.replace(new RegExp(`\\b${old}\\b`, "g"), new_);
-    }
+    // Rust method and UFCS:
+    //   .child_containing_descendant(desc)     → .child_with_descendant(desc)
+    //   Node::child_containing_descendant(...)  → Node::child_with_descendant(...)
+    // Note: \b matches at "." and "::" boundaries because those are non-word chars.
+    // This cannot match ts_node_child_containing_descendant (already handled above)
+    // because "_" before "child" is a word char so \b does not fire there.
+    source = source.replace(
+        /\bchild_containing_descendant\b/g,
+        "child_with_descendant",
+    );
+
     return source;
 }
 
@@ -57,16 +56,14 @@ const transform: Transform<Rust> = async (root: any) => {
     let source = rootNode.text();
 
     if (isLikelyCargoToml(source)) {
-        return migrateTreeSitterCargoToml(source);
+        return migrateCargoToml(source);
     }
 
     if (!isLikelyTreeSitterSource(source)) {
         return source;
     }
 
-    source = replaceRemovedApis(source);
-
-    return source;
+    return migrateRustSource(source);
 };
 
 export default transform;

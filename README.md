@@ -36,7 +36,7 @@ Open [Codemod registry](https://app.codemod.com/registry), and search for
 - `clap-v3-to-v4`: Migrate Rust `clap` usage from v3 to v4 (derive, builder API, error-kind renames, and common `Cargo.toml` dependency bump patterns). Registry: https://app.codemod.com/registry/clap-v3-to-v4
 - `hyper-0-14-to-1-0`: Migrate Rust `hyper` from v0.14 to v1.x with deterministic legacy client import/path rewrites. Registry: pending publish
 - `rand-0-8-to-0-9`: Migrate Rust `rand` usage from v0.8 to v0.9 (`thread_rng` to `rng`, `gen*` to `random*`, and common `Cargo.toml` dependency bump patterns). Registry: https://app.codemod.com/registry/rand-0-8-to-0-9
-- `tree-sitter-0-24-to-0-25`: Migrate Rust `tree-sitter` usage from v0.24 to v0.25 (removed API renames, `ts_node_child_containing_descendant` to `ts_node_child_with_descendant`). Registry: pending publish
+- `tree-sitter-0-24-to-0-25`: Migrate Rust `tree-sitter` usage from v0.24 to v0.25 — renames `child_containing_descendant` across all call forms (Rust method, UFCS, C FFI), plus `Cargo.toml` dependency bump. Registry: pending publish
 
 Run from registry:
 
