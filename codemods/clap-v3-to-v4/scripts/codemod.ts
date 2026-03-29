@@ -327,36 +327,95 @@ const transform: Transform<Rust> = async (root: any) => {
 
     const appSettingsIdentifiers = getAppSettingsIdentifiers(source);
 
+    // Build AppSettings removal regex from discovered identifiers
+    const appSettingsRemovalPattern = appSettingsIdentifiers.length > 0
+        ? new RegExp(
+            `(?:\\n\\s*)?,?\\s*setting\\((?:${appSettingsIdentifiers.map(escapeRegExp).join("|")})::[^)]+\\)`,
+            "g",
+        )
+        : null;
+
+    function stripAppSettings(attrs: string): string {
+        if (!appSettingsRemovalPattern) return attrs;
+        return attrs.replace(appSettingsRemovalPattern, "");
+    }
+
     // === Derive attribute renames (text-based for spacing preservation) ===
 
-    // #[clap(...)] on fields → #[arg(...)]
-    // #[clap(...)] on structs/enums → #[command(...)]
-    // We distinguish by context: if preceded by field-like indentation (inside struct body),
-    // it's a field attribute. Otherwise it's a struct/enum-level attribute.
-
-    // First, rename field-level #[clap(...)] → #[arg(...)]
-    // Field attributes are typically indented more (inside struct/enum body)
-    // and follow doc comments or other field attributes
+    // Field-level #[clap(...)] → #[arg(...)] (indented lines only, single-line attrs)
     source = source.replace(
         /^(\s+)#\[clap\(([^)]*)\)\]/gm,
         (_match: string, indent: string, attrs: string) => {
-            // Remove standalone "value_parser" and "action" from the attr list
-            let cleaned = attrs
+            let cleaned = stripAppSettings(attrs)
                 .replace(/,\s*value_parser\b/g, "")
                 .replace(/\bvalue_parser\s*,\s*/g, "")
                 .replace(/,\s*action\b(?!\s*=)/g, "")
                 .replace(/\baction\s*,\s*(?!=)/g, "");
             const trimmed = cleaned.trim();
-            if (trimmed === "value_parser" || trimmed === "action") {
-                return ""; // Remove entire attribute
+            if (trimmed === "" || trimmed === "value_parser" || trimmed === "action") {
+                return "";
+            }
+            // subcommand and long_about are command-level, not field-level
+            if (/^subcommand$/.test(trimmed) || /^long_about\b/.test(trimmed)) {
+                return `${indent}#[command(${cleaned})]`;
             }
             return `${indent}#[arg(${cleaned})]`;
         },
     );
 
-    // Then rename struct/enum-level #[clap(...)] → #[command(...)]
-    // These are at the top level (no leading whitespace, or minimal)
-    source = source.replace(/^#\[clap\(([^)]*)\)\]/gm, "#[command($1)]");
+    // Struct/enum-level #[clap(...)] → #[command(...)]
+    // Handle multiline and nested parens by scanning with depth tracking
+    let result = "";
+    let pos = 0;
+    while (pos < source.length) {
+        const idx = source.indexOf("#[clap(", pos);
+        if (idx === -1) {
+            result += source.slice(pos);
+            break;
+        }
+
+        // Check if preceded by whitespace (already handled as field-level)
+        const lineStart = source.lastIndexOf("\n", idx) + 1;
+        const isFieldLevel = idx > lineStart && /^\s/.test(source.slice(lineStart));
+
+        if (isFieldLevel) {
+            // Already handled by the field-level regex above — copy through
+            result += source.slice(pos, idx + 7);
+            pos = idx + 7;
+            continue;
+        }
+
+        // Copy everything before this attribute
+        result += source.slice(pos, idx);
+
+        // Find matching closing paren
+        let depth = 1;
+        let i = idx + 7; // after "#[clap("
+        while (i < source.length && depth > 0) {
+            if (source[i] === "(") depth++;
+            if (source[i] === ")") depth--;
+            i++;
+        }
+        const inner = source.slice(idx + 7, i - 1);
+        // Find the closing ']'
+        const closeBracket = source.indexOf("]", i);
+        const endPos = closeBracket !== -1 ? closeBracket + 1 : i;
+
+        const cleaned = stripAppSettings(inner).trim();
+        if (cleaned === "") {
+            // Remove the attribute entirely (including leading newline)
+            let skipStart = idx;
+            if (skipStart > 0 && source[skipStart - 1] === "\n") {
+                skipStart--;
+                result = result.slice(0, -1); // remove trailing newline we already added
+            }
+            pos = endPos;
+        } else {
+            result += `#[command(${cleaned})]`;
+            pos = endPos;
+        }
+    }
+    source = result;
 
     // Clean up lines that became empty from removed attributes
     source = source.replace(/^\s*\n(?=\s*\n)/gm, "");
