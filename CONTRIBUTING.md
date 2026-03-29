@@ -4,9 +4,14 @@ Thanks for your interest in contributing to this codemod monorepo. This guide co
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 18+
-- [Bun](https://bun.sh/) (used for workspace management)
-- [Codemod CLI](https://docs.codemod.com): `bun install -g codemod` or use `bunx codemod@latest`
+- [Bun](https://bun.sh/) — primary runtime for this project
+
+  ```bash
+  curl -fsSL https://bun.sh/install | bash
+  ```
+
+- [Codemod CLI](https://docs.codemod.com): `bunx codemod@latest`
+- npm/npx works as a fallback — replace `bunx` with `npx` in any command
 
 Install workspace dependencies from the repo root:
 
