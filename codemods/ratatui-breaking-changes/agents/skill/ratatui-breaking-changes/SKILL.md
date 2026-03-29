@@ -47,12 +47,12 @@ Automates the most common deterministic API renames in the ratatui TUI library m
 ## How to invoke
 
 ```bash
-npx codemod@latest run ratatui-breaking-changes --target /path/to/rust/project
+bunx codemod@latest run ratatui-breaking-changes --target /path/to/rust/project
 ```
 
 Or via local workflow:
 ```bash
-npx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
+bunx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
 ```
 
 ## Manual follow-up required

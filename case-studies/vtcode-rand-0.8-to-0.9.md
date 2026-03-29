@@ -123,14 +123,14 @@ From this codemod repository:
 
 ```bash
 cd codemods/rand-0.8-to-0.9
-npx codemod@latest workflow validate -w workflow.yaml
-npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+bunx codemod@latest workflow validate -w workflow.yaml
+bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
 ```
 
 Against a target Rust project:
 
 ```bash
-npx codemod@latest run rand-0-8-to-0-9 --target /path/to/project
+bunx codemod@latest run rand-0-8-to-0-9 --target /path/to/project
 ```
 
 Then review remaining manual follow-up for distribution APIs and sampling helpers.

@@ -44,10 +44,10 @@ Automate the most common deterministic API renames in the [ratatui](https://gith
 
 ```bash
 # Validate the workflow
-npx codemod@latest workflow validate -w workflow.yaml
+bunx codemod@latest workflow validate -w workflow.yaml
 
 # Run against your project
-npx codemod@latest workflow run -w workflow.yaml --target /path/to/your/rust/project
+bunx codemod@latest workflow run -w workflow.yaml --target /path/to/your/rust/project
 ```
 
 ## Manual follow-up
@@ -65,10 +65,10 @@ After running, you should:
 
 ```bash
 # Run tests
-npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
 
 # Validate workflow
-npx codemod@latest workflow validate -w workflow.yaml
+bunx codemod@latest workflow validate -w workflow.yaml
 ```
 
 ## References

@@ -6,7 +6,7 @@ Thanks for your interest in contributing to this codemod monorepo. This guide co
 
 - [Node.js](https://nodejs.org/) 18+
 - [Bun](https://bun.sh/) (used for workspace management)
-- [Codemod CLI](https://docs.codemod.com): `npm i -g codemod` or use `npx codemod@latest`
+- [Codemod CLI](https://docs.codemod.com): `bun install -g codemod` or use `bunx codemod@latest`
 
 Install workspace dependencies from the repo root:
 
@@ -42,7 +42,7 @@ case-studies/           # Real-world migration case studies
 ### 1. Scaffold the codemod
 
 ```bash
-npx codemod init
+bunx codemod init
 ```
 
 This creates the directory under `codemods/<slug>/` with the standard layout.
@@ -72,8 +72,8 @@ Include:
 
 ```bash
 cd codemods/<slug>
-npx codemod@latest workflow validate -w workflow.yaml
-npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+bunx codemod@latest workflow validate -w workflow.yaml
+bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
 ```
 
 ### 6. Write the codemod README
@@ -109,8 +109,8 @@ Before opening a release PR, open a tracking issue using the [quality gate templ
 
 ```bash
 cd codemods/<slug>
-npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
-npx codemod@latest workflow validate -w workflow.yaml
+bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+bunx codemod@latest workflow validate -w workflow.yaml
 ```
 
 3. Create and push a git tag from the repo root:

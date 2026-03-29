@@ -20,13 +20,13 @@ Automate deterministic parts of the Rust [hyper](https://github.com/hyperium/hyp
 
 ```bash
 # Validate the workflow
-npx codemod@latest workflow validate -w workflow.yaml
+bunx codemod@latest workflow validate -w workflow.yaml
 
 # Dry run against your project
-npx codemod@latest workflow run -w workflow.yaml --target /path/to/your/rust/project
+bunx codemod@latest workflow run -w workflow.yaml --target /path/to/your/rust/project
 
 # Run the package from the registry
-npx codemod@latest run hyper-0-14-to-1-0 --target /path/to/your/rust/project
+bunx codemod@latest run hyper-0-14-to-1-0 --target /path/to/your/rust/project
 ```
 
 ## Manual follow-up
@@ -42,10 +42,10 @@ After running, you should:
 
 ```bash
 # Run tests
-npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
 
 # Validate workflow
-npx codemod@latest workflow validate -w workflow.yaml
+bunx codemod@latest workflow validate -w workflow.yaml
 ```
 
 ## References

@@ -35,12 +35,12 @@ Automates ~80% of the clap v3 → v4 migration for Rust projects.
 ## How to invoke
 
 ```bash
-npx codemod@latest run axum-0-7-to-0-8 --target /path/to/rust/project
+bunx codemod@latest run axum-0-7-to-0-8 --target /path/to/rust/project
 ```
 
 Or via local workflow:
 ```bash
-npx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
+bunx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
 ```
 
 ## Manual follow-up required

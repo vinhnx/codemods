@@ -30,12 +30,12 @@ Automates the deterministic renames in the rand 0.8 → 0.9 migration for Rust p
 ## How to invoke
 
 ```bash
-npx codemod@latest run rand-0-8-to-0-9 --target /path/to/rust/project
+bunx codemod@latest run rand-0-8-to-0-9 --target /path/to/rust/project
 ```
 
 Or via local workflow:
 ```bash
-npx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
+bunx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
 ```
 
 ## Manual follow-up required

@@ -1,24 +1,51 @@
-# Organization Codemods
+# Codemods
 
-Official codemods for your organization to help users adopt new features and handle breaking changes with less manual work.
+A set of my [Codemod](https://docs.codemod.com) that help Rust projects adopt new library versions and handle breaking changes with less manual work.
 
-Community contributions are welcome. Use this repository to create, validate, and publish codemods from a shared monorepo.
+## Contributing
 
-## One-time setup
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a new codemod, validate it, and prepare it for release. Open a tracking issue with the [quality gate template](.github/ISSUE_TEMPLATE/migration-recipe-quality-gate.yml) when you are ready.
 
-1. Create this codemod repository in your organization.
-2. Sign in to [Codemod](https://app.codemod.com) with your GitHub account.
-3. Install the Codemod GitHub app for this repository so publishes can be associated with your organization.
-4. Configure a [trusted publisher](https://docs.codemod.com) in Codemod so GitHub Actions can publish with OIDC.
-5. Reserve an organization scope in Codemod before publishing so your packages stay grouped in the Codemod Registry.
+## Available codemods
 
-Use [Codemod MCP](https://docs.codemod.com/model-context-protocol) and `npx codemod init` to create new codemods from this monorepo.
+Open [Codemod registry](https://app.codemod.com/registry) and search for:
+
+| Codemod                    | Migration                                                           | Registry                                                     |
+| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `axum-0-7-to-0-8`          | `axum` v0.7 → v0.8 route path syntax (`/:param` → `/{param}`)       | [registry](https://app.codemod.com/registry/axum-0-7-to-0-8) |
+| `clap-v3-to-v4`            | `clap` v3 → v4 (derive, builder API, error-kind renames)            | [registry](https://app.codemod.com/registry/clap-v3-to-v4)   |
+| `hyper-0-14-to-1-0`        | `hyper` v0.14 → v1.x (legacy client import/path rewrites)           | pending                                                      |
+| `rand-0-8-to-0-9`          | `rand` v0.8 → v0.9 (`thread_rng` → `rng`, `gen*` → `random*`)       | [registry](https://app.codemod.com/registry/rand-0-8-to-0-9) |
+| `tree-sitter-0-24-to-0-25` | `tree-sitter` v0.24 → v0.25 (`child_containing_descendant` renames) | pending                                                      |
+| `ratatui-breaking-changes` | `ratatui` v0.24–v0.30 (`Frame::size`→`area`, `Spans`→`Line`, etc.)  | pending                                                      |
+
+### Run from registry
+
+```bash
+bunx codemod run <codemod-name> --target /path/to/rust/project
+```
+
+### Run from source
+
+```bash
+bunx codemod workflow run -w codemods/<slug>/workflow.yaml
+```
+
+By default, codemods run in the current folder. Add `--target /path/to/repo` to run elsewhere.
+
+> [!CAUTION]
+> Codemods modify code. Run them only on Git-tracked files, and commit or stash changes first.
+
+## Case studies
+
+- [VT Code: Full Dependency Migration](case-studies/vtcode-full-migration.md) — End-to-end migration across all codemods with use-case tables and reproduction steps.
+- [VT Code: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) — Deterministic `rand` API rewrites reduce migration toil; distribution edge cases left for manual follow-up.
+- [VT Code: tree-sitter 0.24 to 0.25](case-studies/vtcode-tree-sitter-0.24-to-0.25.md) — `child_containing_descendant` removal across all call forms.
+- [VT Code: ratatui breaking changes](case-studies/vtcode-ratatui-breaking-changes.md) — TUI layer migration from ratatui 0.28/0.29 to 0.30.
 
 ## Repository layout
 
-Each codemod lives under `codemods/<slug>/`.
-
-```text
+```
 codemods/<slug>/
   workflow.yaml
   codemod.yaml
@@ -34,84 +61,24 @@ codemods/<slug>/
 types/
   codemod-ast-grep.d.ts
 case-studies/
+.github/
+  ISSUE_TEMPLATE/
+  workflows/
 ```
 
-Keep each codemod self-contained so maintainers can validate and publish packages independently.
-
-## Available codemods
-
-Open [Codemod registry](https://app.codemod.com/registry), and search for 
-
-- `axum-0-7-to-0-8`: Migrate Rust `axum` route path syntax from v0.7 to v0.8 (`/:param` to `/{param}` and `/*rest` to `/{*rest}`), plus common `Cargo.toml` dependency bump patterns. Registry: https://app.codemod.com/registry/axum-0-7-to-0-8
-- `clap-v3-to-v4`: Migrate Rust `clap` usage from v3 to v4 (derive, builder API, error-kind renames, and common `Cargo.toml` dependency bump patterns). Registry: https://app.codemod.com/registry/clap-v3-to-v4
-- `hyper-0-14-to-1-0`: Migrate Rust `hyper` from v0.14 to v1.x with deterministic legacy client import/path rewrites. Registry: pending publish
-- `rand-0-8-to-0-9`: Migrate Rust `rand` usage from v0.8 to v0.9 (`thread_rng` to `rng`, `gen*` to `random*`, and common `Cargo.toml` dependency bump patterns). Registry: https://app.codemod.com/registry/rand-0-8-to-0-9
-- `tree-sitter-0-24-to-0-25`: Migrate Rust `tree-sitter` usage from v0.24 to v0.25 — renames `child_containing_descendant` across all call forms (Rust method, UFCS, C FFI), plus `Cargo.toml` dependency bump. Registry: pending publish
-- `ratatui-breaking-changes`: Migrate Rust `ratatui` usage across major breaking changes (v0.24–v0.30): `Frame::size`→`area`, terminal module reorganization, `Table` renames, `Spans`→`Line`, and more. Registry: pending publish
-
-Run from registry:
-
-```bash
-npx codemod run axum-0-7-to-0-8 --target /path/to/rust/project
-npx codemod run clap-v3-to-v4 --target /path/to/rust/project
-npx codemod run hyper-0-14-to-1-0 --target /path/to/rust/project
-npx codemod run rand-0-8-to-0-9 --target /path/to/rust/project
-npx codemod run tree-sitter-0-24-to-0-25 --target /path/to/rust/project
-npx codemod run ratatui-breaking-changes --target /path/to/rust/project
-```
+Each codemod is self-contained so maintainers can validate and publish packages independently.
 
 ## Creating codemods
 
-- Scaffold new codemods with `npx codemod init`.
-- Use Codemod MCP when creating or refining codemods, especially when symbol definitions or cross-file references matter.
-- Validate package workflows with `npx codemod workflow validate -w codemods/<slug>/workflow.yaml`.
-- Run package tests from the codemod directory before publishing.
+1. Scaffold: `bunx codemod init`
+2. Use [Codemod MCP](https://docs.codemod.com/model-context-protocol) when symbol definitions or cross-file references matter
+3. Validate: `bunx codemod workflow validate -w codemods/<slug>/workflow.yaml`
+4. Test: `bunx codemod jssg test -l rust ./scripts/codemod.ts -v --strictness loose`
 
-Example validation + tests for one package:
+## Maintainer
 
-```bash
-cd codemods/<slug>
-npx codemod workflow validate -w workflow.yaml
-npx codemod jssg test -l rust ./scripts/codemod.ts -v --strictness loose
-```
-
-## Running codemods
-
-> [!CAUTION]
-> Codemods modify code. Run them only on Git-tracked files, and commit or stash changes first.
-
-### From the registry
-
-```bash
-npx codemod <codemod-name>
-```
-
-### From source
-
-```bash
-npx codemod workflow run -w codemods/<slug>/workflow.yaml
-```
-
-By default, codemods run in the current folder. Add `--target /path/to/repo` to run elsewhere.
-
-## Case studies
-
-- [VT Code: Full Dependency Migration](case-studies/vtcode-full-migration.md) - Comprehensive end-to-end migration of VT Code across all codemods, with use-case tables and reproduction steps.
-- [VT Code: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) - How deterministic `rand` API rewrites reduce migration toil while leaving distribution-related edge cases for manual follow-up.
-- [VT Code: tree-sitter 0.24 to 0.25](case-studies/vtcode-tree-sitter-0.24-to-0.25.md) - Tree-sitter API migration with removed C API function renames across all call forms.
-- [VT Code: ratatui breaking changes](case-studies/vtcode-ratatui-breaking-changes.md) - Migrating VT Code's TUI layer from ratatui 0.28/0.29 to 0.30 with automated import path, method, and type renames.
-
-## Author note
-
-Built and maintained by Vinh Nguyen. Contributions and improvements are welcome through pull requests.
+Vinh Nguyen — [github.com/vinhnx](https://github.com/vinhnx) · vinhnguyen2308@gmail.com
 
 ## License
 
-This repository is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## Publishing and contribution guidance
-
-- See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add a new codemod, validate it, and prepare it for release.
-- Use the generated GitHub Actions workflow to publish after review and merge.
-- Open a tracking issue with the [Migration Recipe Quality Gate template](.github/ISSUE_TEMPLATE/migration-recipe-quality-gate.yml).
-- See the [Codemod docs](https://go.codemod.com/docs) for CLI and publishing details.
+MIT. See [LICENSE](LICENSE).

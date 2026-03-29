@@ -241,13 +241,13 @@ A multi-file project simulating VT Code's TUI structure:
 cd codemods/ratatui-breaking-changes
 
 # Run unit tests
-npx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
 
 # Validate workflow
-npx codemod@latest workflow validate -w workflow.yaml
+bunx codemod@latest workflow validate -w workflow.yaml
 
 # Run against your project
-npx codemod@latest workflow run -w workflow.yaml --target /path/to/project --allow-dirty
+bunx codemod@latest workflow run -w workflow.yaml --target /path/to/project --allow-dirty
 ```
 
 Then manually:

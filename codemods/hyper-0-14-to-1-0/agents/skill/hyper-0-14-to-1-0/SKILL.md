@@ -27,12 +27,12 @@ Only processes source files that contain hyper imports/usages to avoid false rew
 ## How to invoke
 
 ```bash
-npx codemod@latest run hyper-0-14-to-1-0 --target /path/to/rust/project
+bunx codemod@latest run hyper-0-14-to-1-0 --target /path/to/rust/project
 ```
 
 Or via local workflow:
 ```bash
-npx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
+bunx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
 ```
 
 ## Manual follow-up required

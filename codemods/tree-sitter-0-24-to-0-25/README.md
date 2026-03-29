@@ -24,19 +24,19 @@ Migrate Rust `tree-sitter` crate usage from v0.24 to v0.25.
 ## Usage
 
 ```bash
-npx codemod@latest run tree-sitter-0-24-to-0-25 --target /path/to/rust/project
+bunx codemod@latest run tree-sitter-0-24-to-0-25 --target /path/to/rust/project
 ```
 
 Or locally:
 
 ```bash
-npx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
+bunx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
 ```
 
 ## Testing
 
 ```bash
-npx codemod jssg test -l rust ./scripts/codemod.ts -v --strictness loose
+bunx codemod jssg test -l rust ./scripts/codemod.ts -v --strictness loose
 ```
 
 ## References

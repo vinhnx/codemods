@@ -33,12 +33,12 @@ Automates the deterministic API renames in the tree-sitter 0.24 → 0.25 migrati
 ## How to invoke
 
 ```bash
-npx codemod@latest run tree-sitter-0-24-to-0-25 --target /path/to/rust/project
+bunx codemod@latest run tree-sitter-0-24-to-0-25 --target /path/to/rust/project
 ```
 
 Or via local workflow:
 ```bash
-npx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
+bunx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
 ```
 
 ## Manual follow-up required
