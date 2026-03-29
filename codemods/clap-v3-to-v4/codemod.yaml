@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "clap-v3-to-v4"
-version: "1.0.9"
+version: "1.0.10"
 description: "Migrate Rust clap CLI parser from v3 to v4: derive/value enum renames, builder API updates to num_args, ErrorKind renames, and AppSettings cleanup"
 author: "Vinh Nguyen <vinhnguyen2308@gmail.com>"
 license: "MIT"
