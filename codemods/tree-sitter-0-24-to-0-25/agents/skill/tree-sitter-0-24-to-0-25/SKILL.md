@@ -1,9 +1,12 @@
 ---
 name: tree-sitter-0-24-to-0-25
 description: Migrate Rust tree-sitter crate usage from v0.24 to v0.25. Handles removed API renames across all call forms (C FFI, Rust method calls, UFCS), plus Cargo.toml dependency bump. Use this when a Rust project uses tree-sitter 0.24 and needs to upgrade to 0.25.
+codemod-compatibility: ">=1.0.0"
+codemod-skill-version: "1.0.4"
 compatibility: ">=1.0.0"
 metadata:
-  version: "1.0.3"
+  version: "1.0.4"
+allowed-tools: Bash, Glob, Read
 ---
 
 ## What this codemod does

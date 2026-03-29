@@ -1,6 +1,6 @@
 {
   "name": "ratatui-breaking-changes",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Migrate Rust ratatui usage across major breaking changes (v0.24–v0.30)",
   "author": "Vinh Nguyen <vinhnguyen2308@gmail.com>",
   "main": "scripts/codemod.ts",
