@@ -11,10 +11,6 @@ nodes:
         js-ast-grep:
           js_file: scripts/codemod.ts
           language: "rust"
-      - name: "Migrate tree-sitter Cargo.toml dependency"
-        js-ast-grep:
-          js_file: scripts/codemod.ts
-          language: "toml"
       - name: "Install tree-sitter-0-24-to-0-25 skill"
         install-skill:
           package: "tree-sitter-0-24-to-0-25"

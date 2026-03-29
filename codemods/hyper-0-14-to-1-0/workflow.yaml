@@ -11,10 +11,6 @@ nodes:
         js-ast-grep:
           js_file: scripts/codemod.ts
           language: "rust"
-      - name: "Migrate hyper Cargo.toml dependency"
-        js-ast-grep:
-          js_file: scripts/codemod.ts
-          language: "toml"
       - name: "Install hyper-0-14-to-1-0 skill"
         install-skill:
           package: "hyper-0-14-to-1-0"

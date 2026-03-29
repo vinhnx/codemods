@@ -11,10 +11,6 @@ nodes:
         js-ast-grep:
           js_file: scripts/codemod.ts
           language: "rust"
-      - name: "Migrate rand Cargo.toml dependency"
-        js-ast-grep:
-          js_file: scripts/codemod.ts
-          language: "toml"
       - name: "Install rand-0-8-to-0-9 skill"
         install-skill:
           package: "rand-0-8-to-0-9"
