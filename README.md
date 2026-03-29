@@ -96,10 +96,10 @@ By default, codemods run in the current folder. Add `--target /path/to/repo` to 
 
 ## Case studies
 
-- [VTCode: Full Dependency Migration](case-studies/vtcode-full-migration.md) - Comprehensive end-to-end migration of VTCode across all codemods, with use-case tables and reproduction steps.
-- [VTCode: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) - How deterministic `rand` API rewrites reduce migration toil while leaving distribution-related edge cases for manual follow-up.
-- [VTCode: tree-sitter 0.24 to 0.25](case-studies/vtcode-tree-sitter-0.24-to-0.25.md) - Tree-sitter API migration with removed C API function renames across all call forms.
-- [VTCode: ratatui breaking changes](case-studies/vtcode-ratatui-breaking-changes.md) - Migrating VTCode's TUI layer from ratatui 0.28/0.29 to 0.30 with automated import path, method, and type renames.
+- [VT Code: Full Dependency Migration](case-studies/vtcode-full-migration.md) - Comprehensive end-to-end migration of VT Code across all codemods, with use-case tables and reproduction steps.
+- [VT Code: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) - How deterministic `rand` API rewrites reduce migration toil while leaving distribution-related edge cases for manual follow-up.
+- [VT Code: tree-sitter 0.24 to 0.25](case-studies/vtcode-tree-sitter-0.24-to-0.25.md) - Tree-sitter API migration with removed C API function renames across all call forms.
+- [VT Code: ratatui breaking changes](case-studies/vtcode-ratatui-breaking-changes.md) - Migrating VT Code's TUI layer from ratatui 0.28/0.29 to 0.30 with automated import path, method, and type renames.
 
 ## Author note
 

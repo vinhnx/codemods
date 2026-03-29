@@ -1,12 +1,12 @@
-# Case Study: VTCode tree-sitter 0.24 → 0.25 Migration
+# Case Study: VT Code tree-sitter 0.24 → 0.25 Migration
 
 **Date:** 2026-03-29
 **Codemod:** `tree-sitter-0-24-to-0-25`
-**Project:** VTCode baseline (simulated Rust code-intelligence tool)
+**Project:** VT Code baseline (simulated Rust code-intelligence tool)
 
 ## Context
 
-VTCode is a code analysis engine that uses tree-sitter for parsing multiple languages (Rust, Python, JavaScript). The project was on `tree-sitter = "0.24.3"` and needed to upgrade to v0.25.0, which removes the `child_containing_descendant` API entirely.
+VT Code is a code analysis engine that uses tree-sitter for parsing multiple languages (Rust, Python, JavaScript). The project was on `tree-sitter = "0.24.3"` and needed to upgrade to v0.25.0, which removes the `child_containing_descendant` API entirely.
 
 ## Representative code before and after
 
@@ -75,7 +75,7 @@ If your code constructs `TSInput` structs directly via FFI, add the mandatory `d
 // Add: .decode = std::ptr::null()
 ```
 
-VTCode does not construct `TSInput` directly, so this was not an issue here.
+VT Code does not construct `TSInput` directly, so this was not an issue here.
 
 ### 2. Deprecated Rust APIs (migrate before v0.26)
 

@@ -1,6 +1,6 @@
 # Case Study: Migrating VT Code from rand 0.8 to 0.9
 
-This write-up shows how the `rand-0-8-to-0-9` codemod fits into a real migration on [vinhnx/VTCode](https://github.com/vinhnx/VTCode), my own open-source coding agent written primarily in Rust.
+This write-up shows how the `rand-0-8-to-0-9` codemod fits into a real migration on [vinhnx/VT Code](https://github.com/vinhnx/VT Code), my own open-source coding agent written primarily in Rust.
 
 I built and maintain VT Code as a real product, not as a migration demo repository. It has active releases, outside contributors, real users, and a broad feature surface: a CLI and TUI, tool execution, shell-safety controls, protocol integrations, OAuth flows, configuration layers, and a multi-crate Rust workspace. That makes it a good place to evaluate whether a codemod is useful in practice instead of only in synthetic fixtures.
 
