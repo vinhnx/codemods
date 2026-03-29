@@ -6,14 +6,14 @@ A set of my [Codemod](https://docs.codemod.com) that help Rust projects adopt ne
 
 Open [Codemod registry](https://app.codemod.com/registry) and search for:
 
-| Codemod                    | Migration                                                           | Registry                                                     |
-| -------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `axum-0-7-to-0-8`          | `axum` v0.7 → v0.8 route path syntax (`/:param` → `/{param}`)       | [registry](https://app.codemod.com/registry/axum-0-7-to-0-8) |
-| `clap-v3-to-v4`            | `clap` v3 → v4 (derive, builder API, error-kind renames)            | [registry](https://app.codemod.com/registry/clap-v3-to-v4)   |
-| `hyper-0-14-to-1-0`        | `hyper` v0.14 → v1.x (legacy client import/path rewrites)           | pending                                                      |
-| `rand-0-8-to-0-9`          | `rand` v0.8 → v0.9 (`thread_rng` → `rng`, `gen*` → `random*`)       | [registry](https://app.codemod.com/registry/rand-0-8-to-0-9) |
-| `tree-sitter-0-24-to-0-25` | `tree-sitter` v0.24 → v0.25 (`child_containing_descendant` renames) | pending                                                      |
-| `ratatui-breaking-changes` | `ratatui` v0.24–v0.30 (`Frame::size`→`area`, `Spans`→`Line`, etc.)  | pending                                                      |
+| Codemod                    | Migration                                                           | Registry                                                              |
+| -------------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `axum-0-7-to-0-8`          | `axum` v0.7 → v0.8 route path syntax (`/:param` → `/{param}`)       | [registry](https://app.codemod.com/registry/axum-0-7-to-0-8)          |
+| `clap-v3-to-v4`            | `clap` v3 → v4 (derive, builder API, error-kind renames)            | [registry](https://app.codemod.com/registry/clap-v3-to-v4)            |
+| `hyper-0-14-to-1-0`        | `hyper` v0.14 → v1.x (legacy client import/path rewrites)           | [registry](https://app.codemod.com/registry/hyper-0-14-to-1-0)        |
+| `rand-0-8-to-0-9`          | `rand` v0.8 → v0.9 (`thread_rng` → `rng`, `gen*` → `random*`)       | [registry](https://app.codemod.com/registry/rand-0-8-to-0-9)          |
+| `tree-sitter-0-24-to-0-25` | `tree-sitter` v0.24 → v0.25 (`child_containing_descendant` renames) | [registry](https://app.codemod.com/registry/tree-sitter-0-24-to-0-25) |
+| `ratatui-breaking-changes` | `ratatui` v0.24–v0.30 (`Frame::size`→`area`, `Spans`→`Line`, etc.)  | [registry](https://app.codemod.com/registry/ratatui-breaking-changes) |
 
 ### Run from registry
 
