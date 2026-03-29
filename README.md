@@ -73,7 +73,7 @@ Each codemod is self-contained so maintainers can validate and publish packages 
 
 ## Maintainer
 
-Vinh Nguyen — [github.com/vinhnx](https://github.com/vinhnx) · vinhnguyen2308@gmail.com
+Vinh Nguyen
 
 ## Contributing
 
