@@ -351,11 +351,11 @@ const transform: Transform<Rust> = async (root: any) => {
     source = source.replace(/\n\s*\.require_value_delimiter\(true\)/g, "");
     source = source.replace(/\.require_value_delimiter\(true\)/g, "");
 
-    // Remove .setting(AppSettings::ColoredHelp) and aliases imported from clap.
+    // Remove all .setting(AppSettings::...) calls and aliases imported from clap.
     for (const identifier of appSettingsIdentifiers) {
         const escapedIdentifier = escapeRegExp(identifier);
         const pattern = new RegExp(
-            `\\.setting\\(${escapedIdentifier}::ColoredHelp\\)`,
+            `\\n?\\s*\\.setting\\(${escapedIdentifier}::[^)]+\\)`,
             "g",
         );
         source = source.replace(pattern, "");
@@ -376,6 +376,59 @@ const transform: Transform<Rust> = async (root: any) => {
         /ErrorKind::UnrecognizedSubcommand/g,
         "ErrorKind::InvalidSubcommand",
     );
+
+    // After renaming, remove duplicate match arms that resolve to the same variant.
+    // Walk lines to find arms with the same ErrorKind:: variant and remove later duplicates.
+    for (const variant of ["InvalidValue", "InvalidSubcommand"]) {
+        const armPattern = new RegExp(
+            `^(\\s*(?:(?:clap::)?)ErrorKind::${variant}\\s*=>)`,
+        );
+        const lines = source.split("\n");
+        const result: string[] = [];
+        let braceDepth = 0;
+        let inDuplicateArm = false;
+        let seenVariant = false;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            if (inDuplicateArm) {
+                // Track brace depth to know when the arm body ends
+                for (const ch of line) {
+                    if (ch === "{") braceDepth++;
+                    if (ch === "}") braceDepth--;
+                }
+                if (braceDepth <= 0) {
+                    inDuplicateArm = false;
+                    braceDepth = 0;
+                    // Skip trailing comma if present on next line
+                    continue;
+                }
+                continue;
+            }
+
+            if (armPattern.test(line)) {
+                if (seenVariant) {
+                    // This is a duplicate — start skipping
+                    inDuplicateArm = true;
+                    braceDepth = 0;
+                    for (const ch of line) {
+                        if (ch === "{") braceDepth++;
+                        if (ch === "}") braceDepth--;
+                    }
+                    if (braceDepth <= 0) {
+                        inDuplicateArm = false;
+                    }
+                    continue;
+                }
+                seenVariant = true;
+            }
+
+            result.push(line);
+        }
+
+        source = result.join("\n");
+    }
 
     // === ArgEnum / arg_enum → ValueEnum / value_enum ===
 

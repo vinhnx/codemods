@@ -62,8 +62,8 @@ function rewriteLegacyHyperUseStatements(source: string): string {
     );
 
     source = source.replace(
-        /^(\s*)use\s+hyper::\{([^}]*)\};\s*$/gm,
-        (_, indent: string, imports: string) => {
+        /^(\s*)use\s+hyper::\{([^}]*)\};(\s*)$/gm,
+        (_, indent: string, imports: string, trailing: string) => {
             const entries = imports
                 .split(",")
                 .map((entry) => entry.trim())
@@ -101,7 +101,7 @@ function rewriteLegacyHyperUseStatements(source: string): string {
             }
 
             if (lifted.length === 0) {
-                return `${indent}use hyper::{${entries.join(", ")}};`;
+                return `${indent}use hyper::{${entries.join(", ")}};${trailing}`;
             }
 
             const lines: string[] = [];
@@ -110,7 +110,7 @@ function rewriteLegacyHyperUseStatements(source: string): string {
             }
             lines.push(...lifted.map((line) => `${indent}${line}`));
 
-            return lines.join("\n");
+            return lines.join("\n") + trailing;
         },
     );
 
