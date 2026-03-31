@@ -130,7 +130,7 @@ bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
 Against a target Rust project:
 
 ```bash
-bunx codemod@latest run rand-0-8-to-0-9 --target /path/to/project
+bunx codemod@latest rand-0-8-to-0-9 --target /path/to/project
 ```
 
 Then review remaining manual follow-up for distribution APIs and sampling helpers.

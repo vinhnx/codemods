@@ -1,32 +1,20 @@
-import type { Transform } from "codemod:ast-grep";
+import { parse } from "codemod:ast-grep";
+import type { Edit, SgNode, Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
 
-const ROUTE_METHOD_PATTERN = String.raw`((?:\.|::)(?:route|route_service|nest|nest_service)\(\s*)`;
+const ROUTE_METHOD_SUFFIXES = new Set([
+    ".route",
+    ".route_service",
+    ".nest",
+    ".nest_service",
+    "::route",
+    "::route_service",
+    "::nest",
+    "::nest_service",
+]);
 
 function isLikelyAxumSource(source: string): boolean {
     return /\baxum::|^\s*use\s+axum(?:::{1,2}|\s*[{;])/m.test(source);
-}
-
-function isLikelyCargoToml(source: string): boolean {
-    return /^\s*\[(?:package|workspace|dependencies|dev-dependencies|build-dependencies)/m.test(
-        source,
-    );
-}
-
-function migrateAxumCargoToml(source: string): string {
-    let updated = source;
-
-    updated = updated.replace(
-        /^(\s*axum\s*=\s*")0\.7(?:\.[0-9A-Za-z_.-]+)?("\s*)$/gm,
-        "$10.8$2",
-    );
-
-    updated = updated.replace(
-        /(\baxum\s*=\s*\{[^\n}]*\bversion\s*=\s*")0\.7(?:\.[0-9A-Za-z_.-]+)?("[^\n}]*\})/g,
-        "$10.8$2",
-    );
-
-    return updated;
 }
 
 function transformRoutePath(path: string): string {
@@ -35,56 +23,82 @@ function transformRoutePath(path: string): string {
     }
 
     let rewritten = path.replace(/\/:([A-Za-z_][A-Za-z0-9_]*)/g, "/{$1}");
-
     rewritten = rewritten.replace(/\/\*([A-Za-z_][A-Za-z0-9_]*)/g, "/{*$1}");
 
     return rewritten;
 }
 
-function replaceQuotedRoutePaths(source: string): string {
-    const normalStringPattern = new RegExp(
-        `${ROUTE_METHOD_PATTERN}"((?:[^"\\\\]|\\\\.)*)"`,
-        "g",
-    );
+function rewriteStringLiteral(literal: string): string | null {
+    const normal = literal.match(/^"((?:[^"\\]|\\.)*)"$/s);
+    if (normal) {
+        const rewritten = transformRoutePath(normal[1]);
+        return rewritten === normal[1] ? null : `"${rewritten}"`;
+    }
 
-    return source.replace(
-        normalStringPattern,
-        (_, prefix: string, path: string) => {
-            return `${prefix}"${transformRoutePath(path)}"`;
-        },
-    );
+    const raw = literal.match(/^r(#{0,10})"([\s\S]*)"\1$/);
+    if (!raw) {
+        return null;
+    }
+
+    const rewritten = transformRoutePath(raw[2]);
+    return rewritten === raw[2] ? null : `r${raw[1]}"${rewritten}"${raw[1]}`;
 }
 
-function replaceRawRoutePaths(source: string): string {
-    const rawStringPattern = new RegExp(
-        `${ROUTE_METHOD_PATTERN}r(#{0,10})"([\\s\\S]*?)"\\2`,
-        "g",
-    );
+function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
+    if (edits.length === 0) {
+        return rootNode.text();
+    }
 
-    return source.replace(
-        rawStringPattern,
-        (_, prefix: string, hashes: string, path: string) => {
-            return `${prefix}r${hashes}"${transformRoutePath(path)}"${hashes}`;
-        },
-    );
+    const seen = new Set<string>();
+    const uniqueEdits = edits
+        .sort((left, right) => left.startPos - right.startPos || left.endPos - right.endPos)
+        .filter((edit) => {
+            const key = `${edit.startPos}:${edit.endPos}:${edit.insertedText}`;
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.add(key);
+            return true;
+        });
+
+    return rootNode.commitEdits(uniqueEdits);
+}
+
+function rewriteAxumRouteCalls(source: string): string {
+    const parsed = parse("rust", source);
+    const rootNode = parsed.root() as SgNode<Rust>;
+    const edits: Edit[] = [];
+
+    for (const call of rootNode.findAll({ rule: { pattern: "$CALLEE($$$ARGS)" } })) {
+        const callee = call.getMatch("CALLEE");
+        const args = call.getMultipleMatches("ARGS");
+
+        if (!callee || args.length === 0) {
+            continue;
+        }
+
+        if (![...ROUTE_METHOD_SUFFIXES].some((suffix) => callee.text().endsWith(suffix))) {
+            continue;
+        }
+
+        const pathArg = args[0];
+        const rewritten = rewriteStringLiteral(pathArg.text());
+        if (rewritten && rewritten !== pathArg.text()) {
+            edits.push(pathArg.replace(rewritten));
+        }
+    }
+
+    return applyEdits(rootNode, edits);
 }
 
 const transform: Transform<Rust> = async (root: any) => {
-    const rootNode = root.root();
-    let source = rootNode.text();
-
-    if (isLikelyCargoToml(source)) {
-        return migrateAxumCargoToml(source);
-    }
+    const source = root.root().text();
 
     if (!isLikelyAxumSource(source)) {
         return source;
     }
 
-    source = replaceQuotedRoutePaths(source);
-    source = replaceRawRoutePaths(source);
-
-    return source;
+    return rewriteAxumRouteCalls(source);
 };
 
 export default transform;

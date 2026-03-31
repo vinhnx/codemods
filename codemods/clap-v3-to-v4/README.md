@@ -30,10 +30,10 @@ Automate 80%+ of the Rust [clap](https://github.com/clap-rs/clap) CLI parser mig
 - `ErrorKind::EmptyValue` → `ErrorKind::InvalidValue`
 - `ErrorKind::UnrecognizedSubcommand` → `ErrorKind::InvalidSubcommand`
 
-### Cargo.toml dependency updates
+### Cargo.toml follow-up
 
-- `clap = "3.x"` → `clap = "4"`
-- `clap = { version = "3.x", ... }` → `clap = { version = "4", ... }`
+- Update `clap = "3.x"` → `clap = "4"`
+- Update `clap = { version = "3.x", ... }` → `clap = { version = "4", ... }`
 
 ## Usage
 
@@ -45,7 +45,7 @@ bunx codemod@latest workflow validate -w workflow.yaml
 bunx codemod@latest workflow run -w workflow.yaml --target /path/to/your/rust/project
 
 # Run the published package from the registry
-bunx codemod@latest run clap-v3-to-v4 --target /path/to/your/rust/project
+bunx codemod@latest clap-v3-to-v4 --target /path/to/your/rust/project
 ```
 
 ## Manual follow-up
@@ -66,7 +66,6 @@ After running, you should:
 ```bash
 # Run tests
 bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
-bunx codemod@latest jssg test -l toml ./scripts/codemod.ts -v --strictness loose
 
 # Validate workflow
 bunx codemod@latest workflow validate -w workflow.yaml

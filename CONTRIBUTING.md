@@ -58,7 +58,7 @@ Edit `workflow.yaml` to describe the migration steps. Each codemod is self-conta
 
 ### 3. Implement the codemod
 
-Write the transformation logic in `scripts/codemod.ts`. Use [Codemod MCP](https://docs.codemod.com/model-context-protocol) when symbol definitions or cross-file references matter.
+Write the transformation logic in `scripts/codemod.ts`. Prefer AST-targeted `js-ast-grep` edits for source rewrites instead of whole-file string replacement. Use [Codemod MCP](https://docs.codemod.com/model-context-protocol) when symbol definitions or cross-file references matter.
 
 ### 4. Add test fixtures
 

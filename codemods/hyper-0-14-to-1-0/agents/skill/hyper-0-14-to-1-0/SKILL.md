@@ -1,6 +1,6 @@
 ---
 name: hyper-0-14-to-1-0
-description: Migrate Rust hyper from v0.14 to v1.x for deterministic legacy client import and type-path rewrites, plus Cargo.toml dependency updates.
+description: Migrate Rust hyper from v0.14 to v1.x for deterministic legacy client import and type-path rewrites. Use this when a Rust project needs help with the source-level hyper 1 migration.
 codemod-compatibility: ">=1.0.0"
 codemod-skill-version: "1.0.3"
 compatibility: ">=1.0.0"
@@ -24,10 +24,14 @@ Automates deterministic parts of the hyper 0.14 -> 1.x migration for Rust projec
 
 Only processes source files that contain hyper imports/usages to avoid false rewrites in non-hyper code.
 
+## Implementation notes
+
+This package runs AST-backed `js-ast-grep` transforms for Rust source. `Cargo.toml` changes are manual follow-up because the current JSSG runner does not support TOML workflows.
+
 ## How to invoke
 
 ```bash
-bunx codemod@latest run hyper-0-14-to-1-0 --target /path/to/rust/project
+bunx codemod@latest hyper-0-14-to-1-0 --target /path/to/rust/project
 ```
 
 Or via local workflow:

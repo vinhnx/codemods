@@ -42,7 +42,7 @@ VT Code uses `rand` in two locations:
 ### Codemod command
 
 ```bash
-bunx codemod@latest run rand-0-8-to-0-9 --target /path/to/vtcode
+bunx codemod@latest rand-0-8-to-0-9 --target /path/to/vtcode
 ```
 
 ---
@@ -88,7 +88,7 @@ VT Code uses clap across multiple entry points:
 ### Codemod command
 
 ```bash
-bunx codemod@latest run clap-v3-to-v4 --target /path/to/vtcode
+bunx codemod@latest clap-v3-to-v4 --target /path/to/vtcode
 ```
 
 ---
@@ -125,7 +125,7 @@ VT Code uses axum in two locations:
 ### Codemod command
 
 ```bash
-bunx codemod@latest run axum-0-7-to-0-8 --target /path/to/vtcode
+bunx codemod@latest axum-0-7-to-0-8 --target /path/to/vtcode
 ```
 
 ---
@@ -162,7 +162,7 @@ VT Code uses hyper in:
 ### Codemod command
 
 ```bash
-bunx codemod@latest run hyper-0-14-to-1-0 --target /path/to/vtcode
+bunx codemod@latest hyper-0-14-to-1-0 --target /path/to/vtcode
 ```
 
 ---
@@ -201,7 +201,7 @@ VT Code uses tree-sitter in:
 ### Codemod command
 
 ```bash
-bunx codemod@latest run tree-sitter-0-24-to-0-25 --target /path/to/vtcode
+bunx codemod@latest tree-sitter-0-24-to-0-25 --target /path/to/vtcode
 ```
 
 ---
@@ -253,7 +253,7 @@ VT Code's TUI layer spans the core presentation crate. Key patterns hit by the m
 ### Codemod command
 
 ```bash
-bunx codemod@latest run ratatui-breaking-changes --target /path/to/vtcode
+bunx codemod@latest ratatui-0-24-to-0-30 --target /path/to/vtcode
 ```
 
 ---
@@ -278,17 +278,17 @@ All workflows validate. Each codemod has a dedicated skill for post-migration AI
 
 ```bash
 # Validate all workflows
-for c in axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 rand-0.8-to-0.9 tree-sitter-0-24-to-0-25 ratatui-breaking-changes; do
+for c in axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 rand-0.8-to-0.9 tree-sitter-0-24-to-0-25 ratatui-0-24-to-0-30; do
   cd codemods/$c && bunx codemod@latest workflow validate -w workflow.yaml && cd ../..
 done
 
 # Run all test suites
-for c in axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 rand-0.8-to-0.9 tree-sitter-0-24-to-0-25 ratatui-breaking-changes; do
+for c in axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 rand-0.8-to-0.9 tree-sitter-0-24-to-0-25 ratatui-0-24-to-0-30; do
   cd codemods/$c && bunx codemod@latest jssg test -l rust ./scripts/codemod.ts --strictness loose && cd ../..
 done
 
 # Run against a target project
-for c in rand-0-8-to-0-9 axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 tree-sitter-0-24-to-0-25 ratatui-breaking-changes; do
+for c in rand-0-8-to-0-9 axum-0-7-to-0-8 clap-v3-to-v4 hyper-0-14-to-1-0 tree-sitter-0-24-to-0-25 ratatui-0-24-to-0-30; do
   bunx codemod@latest workflow run -w codemods/$c/workflow.yaml --target /path/to/project --allow-dirty
 done
 ```

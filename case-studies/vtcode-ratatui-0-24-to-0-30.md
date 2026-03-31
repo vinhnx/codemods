@@ -1,6 +1,6 @@
 # Case Study: Migrating VT Code from ratatui 0.28 to 0.30
 
-This write-up shows how the `ratatui-breaking-changes` codemod fits into a real migration on [vinhnx/VT Code](https://github.com/vinhnx/VT Code), an open-source coding agent written in Rust.
+This write-up shows how the `ratatui-0-24-to-0-30` codemod fits into a real migration on [vinhnx/VT Code](https://github.com/vinhnx/VT Code), an open-source coding agent written in Rust.
 
 VT Code is an LLM-native coding agent with a TUI built on ratatui, featuring shell safety, multi-provider support, skills support, and protocol integrations. The TUI layer relies heavily on ratatui widgets, layout primitives, and terminal management — making it a realistic test case for automated API migration.
 
@@ -9,7 +9,7 @@ VT Code is an LLM-native coding agent with a TUI built on ratatui, featuring she
 - Library: `ratatui`
 - From: `0.28.x` / `0.29.x`
 - To: `0.30.x`
-- Codemod: `ratatui-breaking-changes`
+- Codemod: `ratatui-0-24-to-0-30`
 
 ## Why this case is useful
 
@@ -238,7 +238,7 @@ A multi-file project simulating VT Code's TUI structure:
 ## Suggested reproduction workflow
 
 ```bash
-cd codemods/ratatui-breaking-changes
+cd codemods/ratatui-0-24-to-0-30
 
 # Run unit tests
 bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose

@@ -27,10 +27,14 @@ Automates the deterministic renames in the rand 0.8 → 0.9 migration for Rust p
 - `.gen_ratio(...)` → `.random_ratio(...)`
 - `Rng::gen*(...)` qualified calls — all renamed equivalently
 
+## Implementation notes
+
+This package runs AST-backed `js-ast-grep` transforms for Rust source. `Cargo.toml` changes are manual follow-up because the current JSSG runner does not support TOML workflows.
+
 ## How to invoke
 
 ```bash
-bunx codemod@latest run rand-0-8-to-0-9 --target /path/to/rust/project
+bunx codemod@latest rand-0-8-to-0-9 --target /path/to/rust/project
 ```
 
 Or via local workflow:

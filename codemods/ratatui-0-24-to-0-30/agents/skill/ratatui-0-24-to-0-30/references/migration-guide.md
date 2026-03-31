@@ -4,7 +4,6 @@ Use this to handle everything the codemod cannot automate.
 
 ## What the codemod already handles
 
-- `ratatui = "0.2x.x"` → `ratatui = "0.30"` in Cargo.toml
 - `use ratatui::terminal::{...}` → `use ratatui::{...}`
 - `frame.size()` → `frame.area()`
 - `Table::highlight_style(...)` → `Table::row_highlight_style(...)`
@@ -23,6 +22,10 @@ Use this to handle everything the codemod cannot automate.
 ---
 
 ## What requires manual follow-up
+
+### 0. Cargo.toml
+
+Update `ratatui` to `0.30.0` in your manifest. This codemod does not rewrite TOML.
 
 ### 1. Title alignment/position chaining (v0.30)
 

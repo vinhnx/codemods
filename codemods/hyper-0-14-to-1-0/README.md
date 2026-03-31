@@ -26,7 +26,7 @@ bunx codemod@latest workflow validate -w workflow.yaml
 bunx codemod@latest workflow run -w workflow.yaml --target /path/to/your/rust/project
 
 # Run the package from the registry
-bunx codemod@latest run hyper-0-14-to-1-0 --target /path/to/your/rust/project
+bunx codemod@latest hyper-0-14-to-1-0 --target /path/to/your/rust/project
 ```
 
 ## Manual follow-up

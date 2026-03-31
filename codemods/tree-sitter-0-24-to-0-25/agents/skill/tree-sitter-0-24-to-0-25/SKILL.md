@@ -1,6 +1,6 @@
 ---
 name: tree-sitter-0-24-to-0-25
-description: Migrate Rust tree-sitter crate usage from v0.24 to v0.25. Handles removed API renames across all call forms (C FFI, Rust method calls, UFCS), plus Cargo.toml dependency bump. Use this when a Rust project uses tree-sitter 0.24 and needs to upgrade to 0.25.
+description: Migrate Rust tree-sitter crate usage from v0.24 to v0.25. Handles removed API renames across all call forms (C FFI, Rust method calls, UFCS). Use this when a Rust project uses tree-sitter 0.24 and needs to upgrade to 0.25.
 codemod-compatibility: ">=1.0.0"
 codemod-skill-version: "1.0.4"
 compatibility: ">=1.0.0"
@@ -25,15 +25,19 @@ Automates the deterministic API renames in the tree-sitter 0.24 → 0.25 migrati
 | C FFI call site | `ts_node_child_containing_descendant(parent, desc)` | `ts_node_child_with_descendant(parent, desc)` |
 | Qualified FFI path | `tree_sitter::ffi::ts_node_child_containing_descendant(...)` | `tree_sitter::ffi::ts_node_child_with_descendant(...)` |
 
-### Cargo.toml dependency bump (automated)
+### Cargo.toml follow-up
 
 - `tree-sitter = "0.24.x"` → `tree-sitter = "0.25"`
 - `tree-sitter = { version = "0.24", ... }` → `tree-sitter = { version = "0.25", ... }`
 
+## Implementation notes
+
+This package runs AST-backed `js-ast-grep` transforms for Rust source. `Cargo.toml` changes are a manual follow-up because the current JSSG runner does not support TOML workflows.
+
 ## How to invoke
 
 ```bash
-bunx codemod@latest run tree-sitter-0-24-to-0-25 --target /path/to/rust/project
+bunx codemod@latest tree-sitter-0-24-to-0-25 --target /path/to/rust/project
 ```
 
 Or via local workflow:
@@ -44,7 +48,7 @@ bunx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
 ## Manual follow-up required
 
 After running:
-1. **Verify `Cargo.toml`** shows `tree-sitter = "0.25"` (confirm the bump applied)
+1. **Update `Cargo.toml`** to `tree-sitter = "0.25"`
 2. **If using FFI `TSInput` struct construction**, add the new mandatory `decode` field (pass `NULL` for built-in UTF-8/UTF-16 decoders)
 3. **Deprecated: `Parser::parse()`** → migrate to `parse_with_options()` with `ParseOptions` before v0.26 removes it
 4. **Deprecated: `QueryCursor::matches()`/`captures()`** → migrate to `*_with_options()` before v0.26

@@ -1,13 +1,13 @@
-# ratatui-breaking-changes
+# ratatui-0-24-to-0-30
 
 Automate the most common deterministic API renames in the [ratatui](https://github.com/ratatui/ratatui) TUI library migration from v0.24–v0.30.
 
 ## What it does
 
-### Cargo.toml dependency updates
+### Cargo.toml follow-up
 
-- `ratatui = "0.2x.x"` → `ratatui = "0.30"`
-- `ratatui = { version = "0.2x.x", ... }` → `ratatui = { version = "0.30", ... }`
+- Update `ratatui = "0.2x.x"` → `ratatui = "0.30.0"`
+- Update `ratatui = { version = "0.2x.x", ... }` → `ratatui = { version = "0.30.0", ... }`
 
 ### Import path updates
 
@@ -54,7 +54,7 @@ bunx codemod@latest workflow run -w workflow.yaml --target /path/to/your/rust/pr
 
 After running, you should:
 
-1. Review `Cargo.toml` updates and feature flags
+1. Update `Cargo.toml` to `ratatui = "0.30.0"` and review feature flags
 2. Clean up Title alignment/position chaining: `.alignment(Alignment::Center)` → `.centered()`, `.position(TitlePosition::Bottom)` → `title_bottom()`
 3. Handle `Flex::SpaceAround` → `Flex::SpaceEvenly` if using the old behavior
 4. Review `Backend` trait implementations for the new `Error` associated type and `clear_region` method

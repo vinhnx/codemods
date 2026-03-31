@@ -13,12 +13,12 @@ Open [Codemod registry](https://app.codemod.com/registry) and search for:
 | `hyper-0-14-to-1-0`        | `hyper` v0.14 → v1.x (legacy client import/path rewrites)           | [registry](https://app.codemod.com/registry/hyper-0-14-to-1-0)        |
 | `rand-0-8-to-0-9`          | `rand` v0.8 → v0.9 (`thread_rng` → `rng`, `gen*` → `random*`)       | [registry](https://app.codemod.com/registry/rand-0-8-to-0-9)          |
 | `tree-sitter-0-24-to-0-25` | `tree-sitter` v0.24 → v0.25 (`child_containing_descendant` renames) | [registry](https://app.codemod.com/registry/tree-sitter-0-24-to-0-25) |
-| `ratatui-breaking-changes` | `ratatui` v0.24–v0.30 (`Frame::size`→`area`, `Spans`→`Line`, etc.)  | [registry](https://app.codemod.com/registry/ratatui-breaking-changes) |
+| `ratatui-0-24-to-0-30`    | `ratatui` v0.24–v0.30 (`Frame::size`→`area`, `Spans`→`Line`, etc.)  | [registry](https://app.codemod.com/registry/ratatui-0-24-to-0-30)    |
 
 ### Run from registry
 
 ```bash
-bunx codemod run <codemod-name> --target /path/to/rust/project
+bunx codemod <codemod-name> --target /path/to/rust/project
 ```
 
 ### Run from source
@@ -37,7 +37,7 @@ By default, codemods run in the current folder. Add `--target /path/to/repo` to 
 - [VT Code: Full Dependency Migration](case-studies/vtcode-full-migration.md) — End-to-end migration across all codemods with use-case tables and reproduction steps.
 - [VT Code: rand 0.8 to 0.9](case-studies/vtcode-rand-0.8-to-0.9.md) — Deterministic `rand` API rewrites reduce migration toil; distribution edge cases left for manual follow-up.
 - [VT Code: tree-sitter 0.24 to 0.25](case-studies/vtcode-tree-sitter-0.24-to-0.25.md) — `child_containing_descendant` removal across all call forms.
-- [VT Code: ratatui breaking changes](case-studies/vtcode-ratatui-breaking-changes.md) — TUI layer migration from ratatui 0.28/0.29 to 0.30.
+- [VT Code: ratatui 0.24 to 0.30](case-studies/vtcode-ratatui-0-24-to-0-30.md) — TUI layer migration from ratatui 0.28/0.29 to 0.30.
 
 ## Repository layout
 
@@ -67,9 +67,10 @@ Each codemod is self-contained so maintainers can validate and publish packages 
 ## Creating codemods
 
 1. Scaffold: `bunx codemod init`
-2. Use [Codemod MCP](https://docs.codemod.com/model-context-protocol) when symbol definitions or cross-file references matter
-3. Validate: `bunx codemod workflow validate -w codemods/<slug>/workflow.yaml`
-4. Test: `bunx codemod jssg test -l rust ./scripts/codemod.ts -v --strictness loose`
+2. Implement Rust rewrites as AST-targeted `js-ast-grep` transforms; avoid whole-file string replacement for source migrations
+3. Use [Codemod MCP](https://docs.codemod.com/model-context-protocol) when symbol definitions or cross-file references matter
+4. Validate: `bunx codemod workflow validate -w codemods/<slug>/workflow.yaml`
+5. Test: `bunx codemod jssg test -l rust ./scripts/codemod.ts -v --strictness loose`
 
 ## Maintainer
 

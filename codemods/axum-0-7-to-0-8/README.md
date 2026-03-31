@@ -15,10 +15,10 @@ Automate the highest-value deterministic part of the Rust [axum](https://github.
     - `.nest_service(...)`
 - Supports normal Rust string literals and raw string literals used in those route definitions
 
-### Cargo.toml dependency updates
+### Cargo.toml follow-up
 
-- `axum = "0.7.x"` -> `axum = "0.8"`
-- `axum = { version = "0.7.x", ... }` -> `axum = { version = "0.8", ... }`
+- Update `axum = "0.7.x"` -> `axum = "0.8"`
+- Update `axum = { version = "0.7.x", ... }` -> `axum = { version = "0.8", ... }`
 
 ## Usage
 
@@ -30,7 +30,7 @@ bunx codemod@latest workflow validate -w workflow.yaml
 bunx codemod@latest workflow run -w workflow.yaml --target /path/to/your/rust/project
 
 # Run the package from the registry
-bunx codemod@latest run axum-0-7-to-0-8 --target /path/to/your/rust/project
+bunx codemod@latest axum-0-7-to-0-8 --target /path/to/your/rust/project
 ```
 
 ## Manual follow-up
@@ -48,7 +48,6 @@ After running, you should:
 ```bash
 # Run tests
 bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
-bunx codemod@latest jssg test -l toml ./scripts/codemod.ts -v --strictness loose
 
 # Validate workflow
 bunx codemod@latest workflow validate -w workflow.yaml

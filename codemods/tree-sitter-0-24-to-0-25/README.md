@@ -10,10 +10,10 @@ Migrate Rust `tree-sitter` crate usage from v0.24 to v0.25.
 - **Rust UFCS**: `Node::child_containing_descendant(node, desc)` → `Node::child_with_descendant(node, desc)`
 - **C FFI extern declaration**: `fn ts_node_child_containing_descendant(...)` → `fn ts_node_child_with_descendant(...)`
 - **C FFI call site**: `ts_node_child_containing_descendant(p, d)` → `ts_node_child_with_descendant(p, d)`
-- **Cargo.toml**: `tree-sitter = "0.24.x"` → `"0.25"` (both simple string and inline table forms)
 
 ### Manual follow-up required
 
+- Update `Cargo.toml`: `tree-sitter = "0.25"` (manual follow-up)
 - `TSInput` struct now has a mandatory `decode` field — pass `NULL` for built-in decoders
 - Deprecated `Parser::parse()` → `parse_with_options()` before v0.26 removes it
 - Deprecated `QueryCursor::matches()`/`captures()` → `*_with_options()` before v0.26
@@ -24,7 +24,7 @@ Migrate Rust `tree-sitter` crate usage from v0.24 to v0.25.
 ## Usage
 
 ```bash
-bunx codemod@latest run tree-sitter-0-24-to-0-25 --target /path/to/rust/project
+bunx codemod@latest tree-sitter-0-24-to-0-25 --target /path/to/rust/project
 ```
 
 Or locally:

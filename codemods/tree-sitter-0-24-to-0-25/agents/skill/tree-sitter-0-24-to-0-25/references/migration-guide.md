@@ -12,9 +12,13 @@ tree-sitter v0.25.0 (released 2025-02-01) is a large release with breaking chang
 | `Node::child_containing_descendant(node, desc)` → `Node::child_with_descendant(node, desc)` | ✅ |
 | FFI: `fn ts_node_child_containing_descendant(...)` → `fn ts_node_child_with_descendant(...)` | ✅ |
 | FFI call: `ts_node_child_containing_descendant(p, d)` → `ts_node_child_with_descendant(p, d)` | ✅ |
-| Cargo.toml: `tree-sitter = "0.24.x"` → `"0.25"` | ✅ |
+| Cargo.toml: `tree-sitter = "0.24.x"` → `"0.25"` | Manual follow-up |
 
 ## Breaking Changes — Manual Required
+
+### 0. Cargo.toml
+
+Update `tree-sitter` to `0.25` in your manifest. This codemod does not rewrite TOML.
 
 ### 1. `TSInput` decode field (FFI users only)
 

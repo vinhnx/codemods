@@ -1,119 +1,199 @@
-import type { Transform } from "codemod:ast-grep";
+import { parse } from "codemod:ast-grep";
+import type { Edit, SgNode, Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
 
 function isLikelyRandSource(source: string): boolean {
     return /\brand::|^\s*use\s+rand(?:::{1,2}|\s*[{;])/m.test(source);
 }
 
-function isLikelyCargoToml(source: string): boolean {
-    return /^\s*\[(?:package|workspace|dependencies|dev-dependencies|build-dependencies)/m.test(
-        source,
-    );
+function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
+    if (edits.length === 0) {
+        return rootNode.text();
+    }
+
+    const seen = new Set<string>();
+    const uniqueEdits = edits
+        .sort((left, right) => left.startPos - right.startPos || left.endPos - right.endPos)
+        .filter((edit) => {
+            const key = `${edit.startPos}:${edit.endPos}:${edit.insertedText}`;
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.add(key);
+            return true;
+        });
+
+    return rootNode.commitEdits(uniqueEdits);
 }
 
-function migrateRandCargoToml(source: string): string {
-    let updated = source;
+function extractGroupedImports(statement: string): string[] | null {
+    const braceStart = statement.indexOf("{");
+    const braceEnd = statement.lastIndexOf("}");
+    if (braceStart === -1 || braceEnd === -1 || braceEnd <= braceStart) {
+        return null;
+    }
 
-    updated = updated.replace(
-        /^(\s*rand\s*=\s*")0\.8(?:\.[0-9A-Za-z_.-]+)?("\s*)$/gm,
-        "$10.9$2",
-    );
-
-    updated = updated.replace(
-        /(\brand\s*=\s*\{[^\n}]*\bversion\s*=\s*")0\.8(?:\.[0-9A-Za-z_.-]+)?("[^\n}]*\})/g,
-        "$10.9$2",
-    );
-
-    return updated;
+    return statement
+        .slice(braceStart + 1, braceEnd)
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
 }
 
-const METHOD_LOOKAHEAD = "(?=\\s*(?:::<[^>]*>)?\\s*\\()";
+function rewriteRandUseStatements(source: string): string {
+    const parsed = parse("rust", source);
+    const rootNode = parsed.root() as SgNode<Rust>;
+    const edits: Edit[] = [];
 
-const RENAMES: [string, string][] = [
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use $IMPORT;" } })) {
+        const statement = useStatement.text();
+
+        if (/^use\s+rand::thread_rng(?:\s+as\s+\w+)?;$/.test(statement)) {
+            edits.push(
+                useStatement.replace(
+                    statement.replace("rand::thread_rng", "rand::rng"),
+                ),
+            );
+            continue;
+        }
+
+        if (!statement.startsWith("use rand::{")) {
+            continue;
+        }
+
+        const entries = extractGroupedImports(statement);
+        if (!entries) {
+            continue;
+        }
+
+        let changed = false;
+        const rewrittenEntries = entries.map((entry) => {
+            const match = entry.match(/^thread_rng(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/);
+            if (!match) {
+                return entry;
+            }
+
+            changed = true;
+            return match[1] ? `rng as ${match[1]}` : "rng";
+        });
+
+        if (!changed) {
+            continue;
+        }
+
+        edits.push(useStatement.replace(`use rand::{${rewrittenEntries.join(", ")}};`));
+    }
+
+    return applyEdits(rootNode, edits);
+}
+
+const METHOD_RENAMES: Array<[string, string]> = [
     ["gen_range", "random_range"],
     ["gen_bool", "random_bool"],
     ["gen_ratio", "random_ratio"],
     ["gen", "random"],
 ];
 
-function replaceMethodNames(source: string): string {
-    for (const [old, new_] of RENAMES) {
-        // Method-call syntax: .gen() → .random()
-        source = source.replace(
-            new RegExp(`\\.${old}${METHOD_LOOKAHEAD}`, "g"),
-            `.${new_}`,
-        );
-        // UFCS syntax: Rng::gen() → Rng::random()
-        source = source.replace(
-            new RegExp(`\\b(?:(rand::)?)Rng::${old}${METHOD_LOOKAHEAD}`, "g"),
-            (_, prefix = "") => `${prefix}Rng::${new_}`,
-        );
+function renameMethod(methodName: string): string | null {
+    for (const [from, to] of METHOD_RENAMES) {
+        if (methodName === from) {
+            return to;
+        }
     }
-    return source;
+
+    return null;
 }
 
-function replaceThreadRngImports(source: string): string {
-    source = source.replace(
-        /^\s*use\s+rand::thread_rng(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?;\s*$/gm,
-        (_, alias?: string) =>
-            alias ? `use rand::rng as ${alias};` : "use rand::rng;",
-    );
+function rewriteRandCalls(source: string): string {
+    const parsed = parse("rust", source);
+    const rootNode = parsed.root() as SgNode<Rust>;
+    const edits: Edit[] = [];
 
-    source = source.replace(
-        /use\s+rand::\{([^}]*)\};/g,
-        (statement, imports) => {
-            const entries = imports
-                .split(",")
-                .map((entry: string) => entry.trim())
-                .filter((entry: string) => entry.length > 0);
+    for (const call of rootNode.findAll({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) {
+        const method = call.getMatch("METHOD");
+        if (!method) {
+            continue;
+        }
 
-            let changed = false;
-            const rewrittenEntries = entries.map((entry: string) => {
-                const match = entry.match(
-                    /^thread_rng(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/,
-                );
-                if (!match) {
-                    return entry;
-                }
+        const renamed = renameMethod(method.text());
+        if (renamed) {
+            edits.push(method.replace(renamed));
+        }
+    }
 
-                changed = true;
-                return match[1] ? `rng as ${match[1]}` : "rng";
-            });
+    for (const call of rootNode.findAll({ rule: { pattern: "Rng::$METHOD($$$ARGS)" } })) {
+        const method = call.getMatch("METHOD");
+        if (!method) {
+            continue;
+        }
 
-            if (!changed) {
-                return statement;
-            }
+        const renamed = renameMethod(method.text());
+        if (renamed) {
+            edits.push(method.replace(renamed));
+        }
+    }
 
-            return `use rand::{${rewrittenEntries.join(", ")}};`;
-        },
-    );
+    for (const call of rootNode.findAll({ rule: { pattern: "rand::Rng::$METHOD($$$ARGS)" } })) {
+        const method = call.getMatch("METHOD");
+        if (!method) {
+            continue;
+        }
 
-    return source;
-}
+        const renamed = renameMethod(method.text());
+        if (renamed) {
+            edits.push(method.replace(renamed));
+        }
+    }
 
-function replaceThreadRngCalls(source: string): string {
-    source = source.replace(/\brand::thread_rng\s*\(/g, "rand::rng(");
-    source = source.replace(/\bthread_rng\s*\(/g, "rng(");
-    return source;
+    for (const call of rootNode.findAll({ rule: { pattern: "$CALLEE($$$ARGS)" } })) {
+        const callee = call.getMatch("CALLEE");
+        if (!callee) {
+            continue;
+        }
+
+        if (callee.text() === "rand::thread_rng") {
+            edits.push(callee.replace("rand::rng"));
+            continue;
+        }
+
+        if (callee.text() === "thread_rng") {
+            edits.push(callee.replace("rng"));
+        }
+    }
+
+    for (const call of rootNode.findAll({ rule: { pattern: "$RECEIVER.$METHOD::<$$$GENERIC_ARGS>($$$ARGS)" } })) {
+        const method = call.getMatch("METHOD");
+        if (method && method.text() === "gen") {
+            edits.push(method.replace("random"));
+        }
+    }
+
+    for (const call of rootNode.findAll({ rule: { pattern: "Rng::$METHOD::<$$$GENERIC_ARGS>($$$ARGS)" } })) {
+        const method = call.getMatch("METHOD");
+        if (method && method.text() === "gen") {
+            edits.push(method.replace("random"));
+        }
+    }
+
+    for (const call of rootNode.findAll({ rule: { pattern: "rand::Rng::$METHOD::<$$$GENERIC_ARGS>($$$ARGS)" } })) {
+        const method = call.getMatch("METHOD");
+        if (method && method.text() === "gen") {
+            edits.push(method.replace("random"));
+        }
+    }
+
+    return applyEdits(rootNode, edits);
 }
 
 const transform: Transform<Rust> = async (root: any) => {
-    const rootNode = root.root();
-    let source = rootNode.text();
-
-    if (isLikelyCargoToml(source)) {
-        return migrateRandCargoToml(source);
-    }
+    const source = root.root().text();
 
     if (!isLikelyRandSource(source)) {
         return source;
     }
 
-    source = replaceThreadRngImports(source);
-    source = replaceThreadRngCalls(source);
-    source = replaceMethodNames(source);
-
-    return source;
+    const withUpdatedImports = rewriteRandUseStatements(source);
+    return rewriteRandCalls(withUpdatedImports);
 };
 
 export default transform;

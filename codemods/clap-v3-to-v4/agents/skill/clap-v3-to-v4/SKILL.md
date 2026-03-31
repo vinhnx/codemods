@@ -32,10 +32,14 @@ Automates ~80% of the clap v3 → v4 migration for Rust projects.
 - `ErrorKind::EmptyValue` → `ErrorKind::InvalidValue`
 - `ErrorKind::UnrecognizedSubcommand` → `ErrorKind::InvalidSubcommand`
 
+## Implementation notes
+
+This package runs AST-backed `js-ast-grep` transforms for Rust source. `Cargo.toml` changes are manual follow-up because the current JSSG runner does not support TOML workflows.
+
 ## How to invoke
 
 ```bash
-bunx codemod@latest run axum-0-7-to-0-8 --target /path/to/rust/project
+bunx codemod@latest clap-v3-to-v4 --target /path/to/rust/project
 ```
 
 Or via local workflow:

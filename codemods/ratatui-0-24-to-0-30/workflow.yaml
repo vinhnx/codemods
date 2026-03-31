@@ -11,6 +11,6 @@ nodes:
         js-ast-grep:
           js_file: scripts/codemod.ts
           language: "rust"
-      - name: "Install ratatui-breaking-changes skill"
+      - name: "Install ratatui-0-24-to-0-30 skill"
         install-skill:
-          package: "ratatui-breaking-changes"
+          package: "ratatui-0-24-to-0-30"

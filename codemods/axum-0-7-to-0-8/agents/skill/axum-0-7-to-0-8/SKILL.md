@@ -27,10 +27,14 @@ Handles both normal string literals (`"..."`) and raw string literals (`r"..."`,
 
 Only processes files that contain axum imports (`use axum` or `axum::`), avoiding false rewrites in non-axum code.
 
+## Implementation notes
+
+This package runs AST-backed `js-ast-grep` transforms for Rust source. `Cargo.toml` changes are manual follow-up because the current JSSG runner does not support TOML workflows.
+
 ## How to invoke
 
 ```bash
-bunx codemod@latest run axum-0-7-to-0-8 --target /path/to/rust/project
+bunx codemod@latest axum-0-7-to-0-8 --target /path/to/rust/project
 ```
 
 Or via local workflow:

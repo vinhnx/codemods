@@ -1,5 +1,5 @@
 ---
-name: ratatui-breaking-changes
+name: ratatui-0-24-to-0-30
 description: Migrate Rust ratatui TUI library across major breaking changes (v0.24–v0.30). Handles Frame::size→area, terminal module privatization, Table renames, Spans→Line, block::Title removal, title_on_bottom, and more. Use this when a Rust project uses ratatui and needs to upgrade to the latest version.
 codemod-compatibility: ">=1.0.0"
 codemod-skill-version: "1.0.2"
@@ -13,9 +13,9 @@ allowed-tools: Bash, Glob, Read
 
 Automates the most common deterministic API renames in the ratatui TUI library migration from v0.24–v0.30.
 
-### Cargo.toml
-- `ratatui = "0.2x.x"` → `ratatui = "0.30"`
-- `ratatui = { version = "0.2x.x", ... }` → `ratatui = { version = "0.30", ... }`
+### Cargo.toml follow-up
+- Update `ratatui = "0.2x.x"` → `ratatui = "0.30.0"`
+- Update `ratatui = { version = "0.2x.x", ... }` → `ratatui = { version = "0.30.0", ... }`
 
 ### Import path updates
 - `use ratatui::terminal::{Terminal, Frame, ...}` → `use ratatui::{Terminal, Frame, ...}`
@@ -44,10 +44,14 @@ Automates the most common deterministic API renames in the ratatui TUI library m
 - `List::highlight_style()` keeps its name (only Table was renamed)
 - `List::new(items).highlight_style(...)` is preserved
 
+## Implementation notes
+
+This package runs AST-backed `js-ast-grep` transforms for Rust source. `Cargo.toml` changes are a manual follow-up because the current JSSG runner does not support TOML workflows.
+
 ## How to invoke
 
 ```bash
-bunx codemod@latest run ratatui-breaking-changes --target /path/to/rust/project
+bunx codemod@latest ratatui-0-24-to-0-30 --target /path/to/rust/project
 ```
 
 Or via local workflow:
@@ -58,7 +62,7 @@ bunx codemod@latest workflow run -w workflow.yaml --target /path/to/rust/project
 ## Manual follow-up required
 
 After running:
-1. Update `Cargo.toml` to `ratatui = "0.30"` and review feature flags
+1. Update `Cargo.toml` to `ratatui = "0.30.0"` and review feature flags
 2. Clean up `Title` alignment/position chaining: `.alignment(Alignment::Center)` → `.centered()`, `.position(TitlePosition::Bottom)` → use `title_bottom()` method
 3. Handle `Flex::SpaceAround` → `Flex::SpaceEvenly` if using the old behavior
 4. Review `Backend` trait implementations for new `Error` type and `clear_region` method

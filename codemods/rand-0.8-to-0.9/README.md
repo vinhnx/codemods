@@ -23,10 +23,10 @@ Automate the deterministic Rust [rand](https://github.com/rust-random/rand) migr
 - `Rng::gen_bool(...)` -> `Rng::random_bool(...)`
 - `Rng::gen_ratio(...)` -> `Rng::random_ratio(...)`
 
-### Cargo.toml dependency updates
+### Cargo.toml follow-up
 
-- `rand = "0.8.x"` -> `rand = "0.9"`
-- `rand = { version = "0.8.x", ... }` -> `rand = { version = "0.9", ... }`
+- Update `rand = "0.8.x"` -> `rand = "0.9"`
+- Update `rand = { version = "0.8.x", ... }` -> `rand = { version = "0.9", ... }`
 
 ## Usage
 
@@ -38,7 +38,7 @@ bunx codemod@latest workflow validate -w workflow.yaml
 bunx codemod@latest workflow run -w workflow.yaml --target /path/to/your/rust/project
 
 # Run the package from the registry
-bunx codemod@latest run rand-0-8-to-0-9 --target /path/to/your/rust/project
+bunx codemod@latest rand-0-8-to-0-9 --target /path/to/your/rust/project
 ```
 
 ## Manual follow-up
@@ -55,7 +55,6 @@ After running, you should:
 ```bash
 # Run tests
 bunx codemod@latest jssg test -l rust ./scripts/codemod.ts -v --strictness loose
-bunx codemod@latest jssg test -l toml ./scripts/codemod.ts -v --strictness loose
 
 # Validate workflow
 bunx codemod@latest workflow validate -w workflow.yaml

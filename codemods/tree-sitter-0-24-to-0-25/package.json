@@ -1,7 +1,7 @@
 {
   "name": "tree-sitter-0-24-to-0-25",
   "version": "1.0.5",
-  "description": "Migrate Rust tree-sitter usage from 0.24 to 0.25: removed API renames, TSInput decode field, and Cargo.toml dependency bump",
+  "description": "Migrate Rust tree-sitter usage from 0.24 to 0.25: removed API renames and TSInput decode follow-up guidance",
   "author": "Vinh Nguyen <vinhnguyen2308@gmail.com>",
   "main": "scripts/codemod.ts",
   "scripts": {
