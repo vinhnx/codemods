@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 name: "ratatui-0-24-to-0-30"
-version: "1.0.3"
+version: "1.0.4"
 description: "Migrate Rust ratatui usage across major breaking changes (v0.24–v0.30): AST-backed source renames plus manual Cargo.toml follow-up"
 author: "Vinh Nguyen <vinhnguyen2308@gmail.com>"
 license: "MIT"

@@ -2,10 +2,10 @@
 name: hyper-0-14-to-1-0
 description: Migrate Rust hyper from v0.14 to v1.x for deterministic legacy client import and type-path rewrites. Use this when a Rust project needs help with the source-level hyper 1 migration.
 codemod-compatibility: ">=1.0.0"
-codemod-skill-version: "1.0.3"
+codemod-skill-version: "1.0.5"
 compatibility: ">=1.0.0"
 metadata:
-  version: "1.0.3"
+  version: "1.0.5"
 allowed-tools: Bash, Glob, Read
 ---
 

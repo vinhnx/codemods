@@ -3,10 +3,10 @@ name: clap-v3-to-v4
 description: Migrate Rust clap CLI parser from v3 to v4. Handles derive attribute renames, builder API updates, ErrorKind renames, and AppSettings cleanup. Use this when a Rust project uses clap v3 and needs to upgrade to v4.
 compatibility: "Requires Rust project using clap v3"
 metadata:
-  version: "1.0.9"
+  version: "1.0.11"
 allowed-tools: Bash, Read, Edit, Glob, Grep
 codemod-compatibility: ">=1.0.0"
-codemod-skill-version: "1.0.9"
+codemod-skill-version: "1.0.11"
 ---
 
 ## What this codemod does

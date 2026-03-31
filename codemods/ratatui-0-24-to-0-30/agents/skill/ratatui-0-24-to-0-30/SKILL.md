@@ -2,10 +2,10 @@
 name: ratatui-0-24-to-0-30
 description: Migrate Rust ratatui TUI library across major breaking changes (v0.24–v0.30). Handles Frame::size→area, terminal module privatization, Table renames, Spans→Line, block::Title removal, title_on_bottom, and more. Use this when a Rust project uses ratatui and needs to upgrade to the latest version.
 codemod-compatibility: ">=1.0.0"
-codemod-skill-version: "1.0.2"
+codemod-skill-version: "1.0.4"
 compatibility: ">=1.0.0"
 metadata:
-  version: "1.0.2"
+  version: "1.0.4"
 allowed-tools: Bash, Glob, Read
 ---
 
