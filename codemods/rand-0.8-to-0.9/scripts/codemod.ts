@@ -26,62 +26,46 @@ function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
     return rootNode.commitEdits(uniqueEdits);
 }
 
-function extractGroupedImports(statement: string): string[] | null {
-    const braceStart = statement.indexOf("{");
-    const braceEnd = statement.lastIndexOf("}");
-    if (braceStart === -1 || braceEnd === -1 || braceEnd <= braceStart) {
-        return null;
-    }
-
-    return statement
-        .slice(braceStart + 1, braceEnd)
-        .split(",")
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0);
-}
-
 function rewriteRandUseStatements(source: string): string {
     const parsed = parse("rust", source);
     const rootNode = parsed.root() as SgNode<Rust>;
     const edits: Edit[] = [];
 
-    for (const useStatement of rootNode.findAll({ rule: { pattern: "use $IMPORT;" } })) {
-        const statement = useStatement.text();
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use rand::thread_rng;" } })) {
+        edits.push(useStatement.replace("use rand::rng;"));
+    }
 
-        if (/^use\s+rand::thread_rng(?:\s+as\s+\w+)?;$/.test(statement)) {
-            edits.push(
-                useStatement.replace(
-                    statement.replace("rand::thread_rng", "rand::rng"),
-                ),
-            );
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use rand::thread_rng as $ALIAS;" },
+    })) {
+        const alias = useStatement.getMatch("ALIAS");
+        if (!alias) {
             continue;
         }
 
-        if (!statement.startsWith("use rand::{")) {
-            continue;
-        }
+        edits.push(useStatement.replace(`use rand::rng as ${alias.text()};`));
+    }
 
-        const entries = extractGroupedImports(statement);
-        if (!entries) {
-            continue;
-        }
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use rand::{$$$ITEMS};" } })) {
+        const items = useStatement
+            .getMultipleMatches("ITEMS")
+            .map((item) => item.text().trim())
+            .filter((item) => item.length > 0);
 
         let changed = false;
-        const rewrittenEntries = entries.map((entry) => {
-            const match = entry.match(/^thread_rng(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/);
+        const rewrittenItems = items.map((item) => {
+            const match = item.match(/^thread_rng(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/);
             if (!match) {
-                return entry;
+                return item;
             }
 
             changed = true;
             return match[1] ? `rng as ${match[1]}` : "rng";
         });
 
-        if (!changed) {
-            continue;
+        if (changed) {
+            edits.push(useStatement.replace(`use rand::{${rewrittenItems.join(", ")}};`));
         }
-
-        edits.push(useStatement.replace(`use rand::{${rewrittenEntries.join(", ")}};`));
     }
 
     return applyEdits(rootNode, edits);

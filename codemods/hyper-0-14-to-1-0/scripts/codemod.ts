@@ -29,99 +29,92 @@ function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
     return rootNode.commitEdits(uniqueEdits);
 }
 
-function extractGroupedImports(statement: string): string[] | null {
-    const braceStart = statement.indexOf("{");
-    const braceEnd = statement.lastIndexOf("}");
-    if (braceStart === -1 || braceEnd === -1 || braceEnd <= braceStart) {
-        return null;
-    }
-
-    return statement
-        .slice(braceStart + 1, braceEnd)
-        .split(",")
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0);
-}
-
-function rewriteDirectHyperUse(statement: string): string | null {
-    if (/^use\s+hyper::Client(?:\s+as\s+\w+)?;$/.test(statement)) {
-        return statement.replace("hyper::Client", CLIENT_PATH);
-    }
-
-    if (
-        /^use\s+hyper::client::HttpConnector(?:\s+as\s+\w+)?;$/.test(statement) ||
-        /^use\s+hyper::client::connect::HttpConnector(?:\s+as\s+\w+)?;$/.test(statement)
-    ) {
-        return statement
-            .replace("hyper::client::connect::HttpConnector", CONNECTOR_PATH)
-            .replace("hyper::client::HttpConnector", CONNECTOR_PATH);
-    }
-
-    return null;
-}
-
-function rewriteGroupedHyperUse(statement: string): string | null {
-    if (!statement.startsWith("use hyper::{")) {
-        return null;
-    }
-
-    const entries = extractGroupedImports(statement);
-    if (!entries) {
-        return null;
-    }
-
-    const keep: string[] = [];
-    const lifted: string[] = [];
-
-    for (const entry of entries) {
-        const clientMatch = entry.match(/^Client(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/);
-        if (clientMatch) {
-            lifted.push(`use ${CLIENT_PATH}${clientMatch[1] ? ` as ${clientMatch[1]}` : ""};`);
-            continue;
-        }
-
-        const connectorMatch = entry.match(
-            /^client::(?:connect::)?HttpConnector(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/,
-        );
-        if (connectorMatch) {
-            lifted.push(
-                `use ${CONNECTOR_PATH}${connectorMatch[1] ? ` as ${connectorMatch[1]}` : ""};`,
-            );
-            continue;
-        }
-
-        keep.push(entry);
-    }
-
-    if (lifted.length === 0) {
-        return null;
-    }
-
-    const lines: string[] = [];
-    if (keep.length > 0) {
-        lines.push(`use hyper::{${keep.join(", ")}};`);
-    }
-    lines.push(...lifted);
-
-    return lines.join("\n");
-}
-
 function rewriteHyperUseStatements(source: string): string {
     const parsed = parse("rust", source);
     const rootNode = parsed.root() as SgNode<Rust>;
     const edits: Edit[] = [];
 
-    for (const useStatement of rootNode.findAll({ rule: { pattern: "use $IMPORT;" } })) {
-        const statement = useStatement.text();
-        const direct = rewriteDirectHyperUse(statement);
-        if (direct) {
-            edits.push(useStatement.replace(direct));
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use hyper::Client;" } })) {
+        edits.push(useStatement.replace(`use ${CLIENT_PATH};`));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use hyper::Client as $ALIAS;" },
+    })) {
+        const alias = useStatement.getMatch("ALIAS");
+        if (!alias) {
             continue;
         }
 
-        const grouped = rewriteGroupedHyperUse(statement);
-        if (grouped) {
-            edits.push(useStatement.replace(grouped));
+        edits.push(useStatement.replace(`use ${CLIENT_PATH} as ${alias.text()};`));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use hyper::client::HttpConnector;" },
+    })) {
+        edits.push(useStatement.replace(`use ${CONNECTOR_PATH};`));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use hyper::client::HttpConnector as $ALIAS;" },
+    })) {
+        const alias = useStatement.getMatch("ALIAS");
+        if (!alias) {
+            continue;
+        }
+
+        edits.push(useStatement.replace(`use ${CONNECTOR_PATH} as ${alias.text()};`));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use hyper::client::connect::HttpConnector;" },
+    })) {
+        edits.push(useStatement.replace(`use ${CONNECTOR_PATH};`));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use hyper::client::connect::HttpConnector as $ALIAS;" },
+    })) {
+        const alias = useStatement.getMatch("ALIAS");
+        if (!alias) {
+            continue;
+        }
+
+        edits.push(useStatement.replace(`use ${CONNECTOR_PATH} as ${alias.text()};`));
+    }
+
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use hyper::{$$$ITEMS};" } })) {
+        const keep: string[] = [];
+        const lifted: string[] = [];
+
+        for (const item of useStatement.getMultipleMatches("ITEMS")) {
+            const text = item.text().trim();
+            const clientMatch = text.match(/^Client(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/);
+            if (clientMatch) {
+                lifted.push(`use ${CLIENT_PATH}${clientMatch[1] ? ` as ${clientMatch[1]}` : ""};`);
+                continue;
+            }
+
+            const connectorMatch = text.match(
+                /^client::(?:connect::)?HttpConnector(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/,
+            );
+            if (connectorMatch) {
+                lifted.push(
+                    `use ${CONNECTOR_PATH}${connectorMatch[1] ? ` as ${connectorMatch[1]}` : ""};`,
+                );
+                continue;
+            }
+
+            keep.push(text);
+        }
+
+        if (lifted.length > 0) {
+            const lines: string[] = [];
+            if (keep.length > 0) {
+                lines.push(`use hyper::{${keep.join(", ")}};`);
+            }
+            lines.push(...lifted);
+            edits.push(useStatement.replace(lines.join("\n")));
         }
     }
 

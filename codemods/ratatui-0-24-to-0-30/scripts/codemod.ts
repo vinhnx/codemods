@@ -26,81 +26,24 @@ function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
     return rootNode.commitEdits(uniqueEdits);
 }
 
-function extractGroupedImports(statement: string): string[] | null {
-    const braceStart = statement.indexOf("{");
-    const braceEnd = statement.lastIndexOf("}");
-    if (braceStart === -1 || braceEnd === -1 || braceEnd <= braceStart) {
-        return null;
-    }
-
-    return statement
-        .slice(braceStart + 1, braceEnd)
-        .split(",")
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.length > 0);
+function formatReplacement(statement: SgNode<Rust>, lines: string[]): string {
+    const indent = " ".repeat(statement.range().start.column);
+    return lines
+        .map((line, index) => (index === 0 ? line : `${indent}${line}`))
+        .join("\n");
 }
 
-function rewriteTerminalUse(statement: string): string | null {
-    if (statement.startsWith("use ratatui::terminal::{")) {
-        return statement.replace("use ratatui::terminal::", "use ratatui::");
+function splitAliasedImport(text: string): { item: string; alias: string | null } {
+    const match = text.match(/^(.*?)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+    if (!match) {
+        return { item: text.trim(), alias: null };
     }
 
-    const singleImport = statement.match(/^use\s+ratatui::terminal::([A-Za-z_][A-Za-z0-9_]*);$/);
-    if (singleImport) {
-        return `use ratatui::${singleImport[1]};`;
-    }
-
-    return null;
+    return { item: match[1].trim(), alias: match[2] };
 }
 
-function rewriteBlockUse(statement: string): string | null {
-    if (statement.startsWith("use ratatui::widgets::block::{")) {
-        const entries = extractGroupedImports(statement);
-        if (!entries) {
-            return null;
-        }
-
-        const widgetEntries: string[] = [];
-        const extraLines: string[] = [];
-
-        for (const entry of entries) {
-            if (entry === "Title") {
-                extraLines.push("use ratatui::text::Line;");
-                continue;
-            }
-
-            if (entry === "Position") {
-                widgetEntries.push("TitlePosition");
-                continue;
-            }
-
-            widgetEntries.push(entry);
-        }
-
-        const lines: string[] = [];
-        if (widgetEntries.length === 1) {
-            lines.push(`use ratatui::widgets::${widgetEntries[0]};`);
-        } else if (widgetEntries.length > 1) {
-            lines.push(`use ratatui::widgets::{${widgetEntries.join(", ")}};`);
-        }
-
-        lines.push(...extraLines);
-        return lines.length > 0 ? lines.join("\n") : null;
-    }
-
-    if (statement === "use ratatui::widgets::block::BlockExt;") {
-        return "use ratatui::widgets::BlockExt;";
-    }
-
-    if (statement === "use ratatui::widgets::block::Title;") {
-        return "use ratatui::text::Line;";
-    }
-
-    if (statement === "use ratatui::widgets::block::Position;") {
-        return "use ratatui::widgets::TitlePosition;";
-    }
-
-    return null;
+function withAlias(path: string, alias: string | null): string {
+    return alias ? `${path} as ${alias}` : path;
 }
 
 const SCROLLBAR_WIDGET_TYPES = new Set([
@@ -109,65 +52,155 @@ const SCROLLBAR_WIDGET_TYPES = new Set([
     "ScrollbarOrientation",
 ]);
 
-function rewriteScrollbarUse(statement: string): string | null {
-    if (statement.startsWith("use ratatui::widgets::scrollbar::{")) {
-        const entries = extractGroupedImports(statement);
-        if (!entries) {
-            return null;
-        }
-
-        const lines: string[] = [];
-        for (const entry of entries) {
-            if (SCROLLBAR_WIDGET_TYPES.has(entry)) {
-                lines.push(`use ratatui::widgets::${entry};`);
-                continue;
-            }
-
-            if (entry === "Set") {
-                lines.push("use ratatui::symbols::scrollbar::Set;");
-                continue;
-            }
-
-            lines.push(`use ratatui::widgets::${entry};`);
-        }
-
-        return lines.join("\n");
-    }
-
-    const directImport = statement.match(
-        /^use\s+ratatui::widgets::scrollbar::([A-Za-z_][A-Za-z0-9_]*);$/,
-    );
-    if (!directImport) {
-        return null;
-    }
-
-    const item = directImport[1];
-    if (item === "Set") {
-        return "use ratatui::symbols::scrollbar::Set;";
-    }
-
-    return `use ratatui::widgets::${item};`;
-}
-
 function rewriteUseStatements(source: string): string {
     const parsed = parse("rust", source);
     const rootNode = parsed.root() as SgNode<Rust>;
     const edits: Edit[] = [];
 
-    for (const useStatement of rootNode.findAll({ rule: { pattern: "use $IMPORT;" } })) {
-        const statement = useStatement.text();
-        const rewritten =
-            rewriteTerminalUse(statement) ??
-            rewriteBlockUse(statement) ??
-            rewriteScrollbarUse(statement);
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use ratatui::terminal::{$$$ITEMS};" },
+    })) {
+        const items = useStatement
+            .getMultipleMatches("ITEMS")
+            .map((item) => item.text().trim())
+            .filter((item) => item.length > 0);
+        edits.push(useStatement.replace(`use ratatui::{${items.join(", ")}};`));
+    }
 
-        if (rewritten && rewritten !== statement) {
-            const indent = " ".repeat(useStatement.range().start.column);
-            const formatted = rewritten
-                .split("\n")
-                .map((line, index) => (index === 0 ? line : `${indent}${line}`))
-                .join("\n");
-            edits.push(useStatement.replace(formatted));
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use ratatui::terminal::$ITEM;" },
+    })) {
+        const item = useStatement.getMatch("ITEM");
+        if (!item) {
+            continue;
+        }
+
+        edits.push(useStatement.replace(`use ratatui::${item.text()};`));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use ratatui::widgets::block::{$$$ITEMS};" },
+    })) {
+        const widgetItems: string[] = [];
+        const extraLines: string[] = [];
+
+        for (const itemNode of useStatement.getMultipleMatches("ITEMS")) {
+            const { item, alias } = splitAliasedImport(itemNode.text());
+
+            if (item === "Title") {
+                extraLines.push(`use ${withAlias("ratatui::text::Line", alias)};`);
+                continue;
+            }
+
+            if (item === "Position") {
+                extraLines.push(`use ${withAlias("ratatui::widgets::TitlePosition", alias)};`);
+                continue;
+            }
+
+            widgetItems.push(withAlias(`ratatui::widgets::${item}`, alias));
+        }
+
+        const lines: string[] = [];
+        if (widgetItems.length === 1) {
+            lines.push(`use ${widgetItems[0]};`);
+        } else if (widgetItems.length > 1) {
+            const items = widgetItems.map((item) => item.replace(/^ratatui::widgets::/, ""));
+            lines.push(`use ratatui::widgets::{${items.join(", ")}};`);
+        }
+        lines.push(...extraLines);
+
+        if (lines.length > 0) {
+            edits.push(useStatement.replace(formatReplacement(useStatement, lines)));
+        }
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use ratatui::widgets::block::$ITEM;" },
+    })) {
+        const itemNode = useStatement.getMatch("ITEM");
+        if (!itemNode) {
+            continue;
+        }
+
+        const { item, alias } = splitAliasedImport(itemNode.text());
+
+        if (item === "Title") {
+            edits.push(useStatement.replace(`use ${withAlias("ratatui::text::Line", alias)};`));
+            continue;
+        }
+
+        if (item === "Position") {
+            edits.push(
+                useStatement.replace(`use ${withAlias("ratatui::widgets::TitlePosition", alias)};`),
+            );
+            continue;
+        }
+
+        edits.push(useStatement.replace(`use ${withAlias(`ratatui::widgets::${item}`, alias)};`));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use ratatui::widgets::scrollbar::{$$$ITEMS};" },
+    })) {
+        const lines: string[] = [];
+
+        for (const itemNode of useStatement.getMultipleMatches("ITEMS")) {
+            const { item, alias } = splitAliasedImport(itemNode.text());
+
+            if (item === "Set") {
+                lines.push(`use ${withAlias("ratatui::symbols::scrollbar::Set", alias)};`);
+                continue;
+            }
+
+            const path = SCROLLBAR_WIDGET_TYPES.has(item)
+                ? `ratatui::widgets::${item}`
+                : `ratatui::widgets::${item}`;
+            lines.push(`use ${withAlias(path, alias)};`);
+        }
+
+        edits.push(useStatement.replace(formatReplacement(useStatement, lines)));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use ratatui::widgets::scrollbar::$ITEM;" },
+    })) {
+        const itemNode = useStatement.getMatch("ITEM");
+        if (!itemNode) {
+            continue;
+        }
+
+        const { item, alias } = splitAliasedImport(itemNode.text());
+        if (item === "Set") {
+            edits.push(
+                useStatement.replace(`use ${withAlias("ratatui::symbols::scrollbar::Set", alias)};`),
+            );
+            continue;
+        }
+
+        edits.push(useStatement.replace(`use ${withAlias(`ratatui::widgets::${item}`, alias)};`));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use ratatui::text::Spans;" },
+    })) {
+        edits.push(useStatement.replace("use ratatui::text::Line;"));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use ratatui::text::{$$$ITEMS};" },
+    })) {
+        const items = useStatement
+            .getMultipleMatches("ITEMS")
+            .map((itemNode) => {
+                const { item, alias } = splitAliasedImport(itemNode.text());
+                if (item === "Spans") {
+                    return withAlias("Line", alias);
+                }
+                return withAlias(item, alias);
+            });
+
+        if (items.some((item) => item.startsWith("Line"))) {
+            edits.push(useStatement.replace(`use ratatui::text::{${items.join(", ")}};`));
         }
     }
 
@@ -263,43 +296,30 @@ function rewriteCallsAndIdentifiers(source: string): string {
     return applyEdits(rootNode, edits);
 }
 
-function ensureImport(source: string, importLine: string, matches: RegExp, existing: RegExp): string {
-    if (!matches.test(source) || existing.test(source)) {
-        return source;
+function dedupeUseStatements(source: string): string {
+    const parsed = parse("rust", source);
+    const rootNode = parsed.root() as SgNode<Rust>;
+    const edits: Edit[] = [];
+    const seen = new Set<string>();
+
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use $IMPORT;" } })) {
+        const statement = useStatement.text();
+        if (seen.has(statement)) {
+            edits.push(useStatement.replace(""));
+            continue;
+        }
+
+        seen.add(statement);
     }
 
-    const lines = source.split("\n");
-    const insertAfter = lines.findIndex((line) => line.startsWith("use ratatui"));
-    if (insertAfter === -1) {
-        return `${importLine}\n${source}`;
-    }
-
-    lines.splice(insertAfter + 1, 0, importLine);
-    return lines.join("\n");
+    return applyEdits(rootNode, edits);
 }
 
 function migrateRatatuiSource(source: string): string {
     let updated = rewriteUseStatements(source);
     updated = rewriteCallsAndIdentifiers(updated);
-    updated = updated
-        .replace(/\bframe\.size\(\)/g, "frame.area()")
-        .replace(/\bterminal\.size\(\)/g, "terminal.area()")
-        .replace(/Buffer::filled\(\s*([^,]+),\s*&\s*Cell::/g, "Buffer::filled($1, Cell::")
-        .replace(/\bSpans::/g, "Line::")
-        .replace(/\bSpans</g, "Line<")
-        .replace(/\bSpans\b/g, "Line")
-        .replace(/\bsymbols::line::Set\b/g, "symbols::border::Set");
-    updated = ensureImport(
-        updated,
-        "use ratatui::widgets::TitlePosition;",
-        /\bTitlePosition::/m,
-        /^\s*use\s+ratatui::widgets::TitlePosition;$/m,
-    );
-    updated = updated.replace(
-        /^(use\s+ratatui::text::Line;\n)(use\s+ratatui::text::Line;\n)+/m,
-        "$1",
-    );
-    return updated;
+    updated = dedupeUseStatements(updated);
+    return updated.replace(/\n(\s*\n){2,}/g, "\n\n");
 }
 
 const transform: Transform<Rust> = async (root: any) => {

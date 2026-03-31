@@ -10,30 +10,38 @@ function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function getAppSettingsIdentifiers(source: string): string[] {
-    const identifiers = new Set<string>();
-
-    const directImportPattern =
-        /use\s+clap::AppSettings(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?;/g;
-
-    for (const match of source.matchAll(directImportPattern)) {
-        identifiers.add(match[1] ?? "AppSettings");
+function splitAliasedImport(text: string): { item: string; alias: string | null } {
+    const match = text.match(/^(.*?)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/);
+    if (!match) {
+        return { item: text.trim(), alias: null };
     }
 
-    const groupedImportPattern = /use\s+clap::\{([^}]*)\};/g;
-    for (const match of source.matchAll(groupedImportPattern)) {
-        const imports = match[1]
-            .split(",")
-            .map((entry) => entry.trim())
-            .filter((entry) => entry.length > 0);
+    return { item: match[1].trim(), alias: match[2] };
+}
 
-        for (const entry of imports) {
-            const appSettingsMatch = entry.match(
-                /^AppSettings(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/,
-            );
+function collectAppSettingsIdentifiers(source: string): string[] {
+    const parsed = parse("rust", source);
+    const rootNode = parsed.root() as SgNode<Rust>;
+    const identifiers = new Set<string>(["AppSettings", "clap::AppSettings"]);
 
-            if (appSettingsMatch) {
-                identifiers.add(appSettingsMatch[1] ?? "AppSettings");
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use clap::AppSettings;" } })) {
+        identifiers.add("AppSettings");
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use clap::AppSettings as $ALIAS;" },
+    })) {
+        const alias = useStatement.getMatch("ALIAS");
+        if (alias) {
+            identifiers.add(alias.text());
+        }
+    }
+
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use clap::{$$$ITEMS};" } })) {
+        for (const itemNode of useStatement.getMultipleMatches("ITEMS")) {
+            const { item, alias } = splitAliasedImport(itemNode.text());
+            if (item === "AppSettings") {
+                identifiers.add(alias ?? "AppSettings");
             }
         }
     }
@@ -102,193 +110,115 @@ function formatNumArgsExpression(lower: number, upper?: number): string {
     return `${lower}..=${upper}`;
 }
 
-function deduplicateErrorKindArms(source: string): string {
-    for (const variant of ["InvalidValue", "InvalidSubcommand"]) {
-        const pattern = new RegExp(
-            `^\\s*(?:(?:clap::)?)ErrorKind::${variant}\\s*=>`,
-        );
-        const lines = source.split("\n");
-        const result: string[] = [];
-        let seen = false;
+function collapseNumArgsChain(chain: string): string {
+    const lines = chain.split("\n");
+    const cardinalityLines: Array<{ index: number; line: string }> = [];
+    let sawPlaceholder = false;
+    let exactValue: number | undefined;
+    let lowerBound: number | undefined;
+    let upperBound: number | undefined;
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-
-            if (!pattern.test(line)) {
-                result.push(line);
-                continue;
-            }
-            if (!seen) {
-                seen = true;
-                result.push(line);
-                continue;
-            }
-
-            let depth = 0;
-            for (const ch of line) {
-                if (ch === "{") depth++;
-                if (ch === "}") depth--;
-            }
-            while (depth > 0 && i + 1 < lines.length) {
-                i++;
-                for (const ch of lines[i]) {
-                    if (ch === "{") depth++;
-                    if (ch === "}") depth--;
-                }
-            }
+    for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+        const placeholder = parseNumArgsPlaceholder(line);
+        if (!placeholder && !line.includes(".num_args(")) {
+            continue;
         }
 
-        source = result.join("\n");
-    }
-    return source;
-}
+        cardinalityLines.push({ index, line });
 
-function collapseNumArgsChains(source: string): string {
-    return source.replace(
-        /((?:\n[ \t]*\.[A-Za-z_][A-Za-z0-9_]*\([^()\n]*\))+)/g,
-        (chain) => {
-            const lines = chain.split("\n");
-            const cardinalityLines: Array<{ index: number; line: string }> = [];
-            let sawPlaceholder = false;
-            let exactValue: number | undefined;
-            let lowerBound: number | undefined;
-            let upperBound: number | undefined;
+        if (placeholder) {
+            sawPlaceholder = true;
+            if (placeholder.kind === "exact") {
+                exactValue = placeholder.value;
+                continue;
+            }
 
-            for (let index = 0; index < lines.length; index += 1) {
-                const line = lines[index];
-                const placeholder = parseNumArgsPlaceholder(line);
-                if (!placeholder && !line.includes(".num_args(")) {
-                    continue;
-                }
-
-                cardinalityLines.push({ index, line });
-
-                if (placeholder) {
-                    sawPlaceholder = true;
-                    if (placeholder.kind === "exact") {
-                        exactValue = placeholder.value;
-                        continue;
-                    }
-
-                    if (placeholder.kind === "min") {
-                        lowerBound =
-                            lowerBound === undefined
-                                ? placeholder.value
-                                : Math.max(lowerBound, placeholder.value);
-                        continue;
-                    }
-
-                    upperBound =
-                        upperBound === undefined
-                            ? placeholder.value
-                            : Math.min(upperBound, placeholder.value);
-                    continue;
-                }
-
-                const parsed = parseNumArgsExpression(line);
-                if (!parsed) {
-                    continue;
-                }
-
-                if (parsed.kind === "exact") {
-                    exactValue = parsed.lower;
-                    continue;
-                }
-
+            if (placeholder.kind === "min") {
                 lowerBound =
                     lowerBound === undefined
-                        ? parsed.lower
-                        : Math.max(lowerBound, parsed.lower);
-
-                if (parsed.upper !== undefined) {
-                    upperBound =
-                        upperBound === undefined
-                            ? parsed.upper
-                            : Math.min(upperBound, parsed.upper);
-                }
+                        ? placeholder.value
+                        : Math.max(lowerBound, placeholder.value);
+                continue;
             }
 
-            if (cardinalityLines.length === 0) {
-                return chain;
-            }
+            upperBound =
+                upperBound === undefined
+                    ? placeholder.value
+                    : Math.min(upperBound, placeholder.value);
+            continue;
+        }
 
-            if (lowerBound === undefined && upperBound !== undefined) {
-                lowerBound = 1;
-            }
+        const parsed = parseNumArgsExpression(line);
+        if (!parsed) {
+            continue;
+        }
 
-            if (cardinalityLines.length === 1 && !sawPlaceholder) {
-                return chain;
-            }
+        if (parsed.kind === "exact") {
+            exactValue = parsed.lower;
+            continue;
+        }
 
-            const lastNumArgsIndex =
-                cardinalityLines[cardinalityLines.length - 1].index;
+        lowerBound =
+            lowerBound === undefined
+                ? parsed.lower
+                : Math.max(lowerBound, parsed.lower);
 
-            let replacement =
-                cardinalityLines[cardinalityLines.length - 1].line;
-            if (exactValue !== undefined) {
-                replacement = replacement.replace(
-                    /\.(?:num_args|__codemod_num_args_exact|__codemod_num_args_min|__codemod_num_args_max)\([^)]+\)/,
-                    `.num_args(${exactValue})`,
-                );
-            } else if (lowerBound !== undefined) {
-                replacement = replacement.replace(
-                    /\.(?:num_args|__codemod_num_args_exact|__codemod_num_args_min|__codemod_num_args_max)\([^)]+\)/,
-                    `.num_args(${formatNumArgsExpression(lowerBound, upperBound)})`,
-                );
-            }
+        if (parsed.upper !== undefined) {
+            upperBound =
+                upperBound === undefined
+                    ? parsed.upper
+                    : Math.min(upperBound, parsed.upper);
+        }
+    }
 
-            const rebuiltLines: string[] = [];
-            for (let index = 0; index < lines.length; index += 1) {
-                const line = lines[index];
-                const hasCardinalityCall =
-                    line.includes(".num_args(") ||
-                    line.includes(".__codemod_num_args_exact(") ||
-                    line.includes(".__codemod_num_args_min(") ||
-                    line.includes(".__codemod_num_args_max(");
+    if (cardinalityLines.length === 0) {
+        return chain;
+    }
 
-                if (!hasCardinalityCall) {
-                    rebuiltLines.push(line);
-                    continue;
-                }
+    if (lowerBound === undefined && upperBound !== undefined) {
+        lowerBound = 1;
+    }
 
-                if (index === lastNumArgsIndex) {
-                    rebuiltLines.push(replacement);
-                }
-            }
+    if (cardinalityLines.length === 1 && !sawPlaceholder) {
+        return chain;
+    }
 
-            return rebuiltLines.join("\n");
-        },
-    );
-}
+    const lastNumArgsIndex = cardinalityLines[cardinalityLines.length - 1].index;
 
-function cleanupClapImports(source: string): string {
-    const cleanedBraceImports = source.replace(
-        /use\s+clap::\{([^}]*)\};/g,
-        (statement, imports) => {
-            if (!imports.includes("AppSettings")) {
-                return statement;
-            }
+    let replacement = cardinalityLines[cardinalityLines.length - 1].line;
+    if (exactValue !== undefined) {
+        replacement = replacement.replace(
+            /\.(?:num_args|__codemod_num_args_exact|__codemod_num_args_min|__codemod_num_args_max)\([^)]+\)/,
+            `.num_args(${exactValue})`,
+        );
+    } else if (lowerBound !== undefined) {
+        replacement = replacement.replace(
+            /\.(?:num_args|__codemod_num_args_exact|__codemod_num_args_min|__codemod_num_args_max)\([^)]+\)/,
+            `.num_args(${formatNumArgsExpression(lowerBound, upperBound)})`,
+        );
+    }
 
-            const cleanedImports = imports
-                .split(",")
-                .map((entry: string) => entry.trim())
-                .filter(
-                    (entry: string) =>
-                        entry.length > 0 &&
-                        !/^AppSettings(?:\s+as\s+\w+)?$/.test(entry),
-                );
+    const rebuiltLines: string[] = [];
+    for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+        const hasCardinalityCall =
+            line.includes(".num_args(") ||
+            line.includes(".__codemod_num_args_exact(") ||
+            line.includes(".__codemod_num_args_min(") ||
+            line.includes(".__codemod_num_args_max(");
 
-            if (cleanedImports.length === 0) {
-                return "";
-            }
+        if (!hasCardinalityCall) {
+            rebuiltLines.push(line);
+            continue;
+        }
 
-            return `use clap::{${cleanedImports.join(", ")}};`;
-        },
-    );
+        if (index === lastNumArgsIndex) {
+            rebuiltLines.push(replacement);
+        }
+    }
 
-    return cleanedBraceImports
-        .replace(/^\s*use\s+clap::AppSettings(?:\s+as\s+\w+)?;\s*\n?/gm, "")
-        .replace(/\n{3,}/g, "\n\n");
+    return rebuiltLines.join("\n");
 }
 
 function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
@@ -316,10 +246,13 @@ function createAppSettingsRemovalPattern(appSettingsIdentifiers: string[]): RegE
         return null;
     }
 
+    const references = [...new Set(appSettingsIdentifiers.map(escapeRegExp))];
+    const joined = references.join("|");
+
     return new RegExp(
-        `(?:\\n\\s*)?,?\\s*setting\\((?:${appSettingsIdentifiers.map(escapeRegExp).join("|")})::[^)]+\\)` +
-        `|,\\s*\\bsetting\\s*=\\s*(?:${appSettingsIdentifiers.map(escapeRegExp).join("|")})::\\w+` +
-        `|\\bsetting\\s*=\\s*(?:${appSettingsIdentifiers.map(escapeRegExp).join("|")})::\\w+\\s*,?`,
+        `(?:\\n\\s*)?,?\\s*setting\\((?:${joined})::[^)]+\\)` +
+        `|,\\s*\\bsetting\\s*=\\s*(?:${joined})::\\w+` +
+        `|\\bsetting\\s*=\\s*(?:${joined})::\\w+\\s*,?`,
         "g",
     );
 }
@@ -332,6 +265,20 @@ function stripAppSettings(attrs: string, removalPattern: RegExp | null): string 
     return attrs.replace(removalPattern, "");
 }
 
+function cleanClapAttributeArgs(attrs: string, removalPattern: RegExp | null): string {
+    return stripAppSettings(attrs, removalPattern)
+        .replace(/,\s*value_parser\b/g, "")
+        .replace(/\bvalue_parser\s*,\s*/g, "")
+        .replace(/,\s*action\b(?!\s*=)/g, "")
+        .replace(/\baction\s*,\s*(?!=)/g, "")
+        .replace(/,\s*\btakes_value\s*=\s*(?:true|false)\b/g, "")
+        .replace(/\btakes_value\s*=\s*(?:true|false)\b\s*,?\s*/g, "");
+}
+
+function isFieldLikeClapAttribute(attribute: SgNode<Rust>): boolean {
+    return attribute.inside({ rule: { kind: "field_declaration" } });
+}
+
 function rewriteClapAttributes(source: string, removalPattern: RegExp | null): string {
     const parsed = parse("rust", source);
     const rootNode = parsed.root() as SgNode<Rust>;
@@ -340,29 +287,14 @@ function rewriteClapAttributes(source: string, removalPattern: RegExp | null): s
     for (const attribute of rootNode.findAll({ rule: { pattern: "#[clap($$$ARGS)]" } })) {
         const text = attribute.text();
         const inner = text.slice("#[clap(".length, -2);
-        const isIndentedAttribute = attribute.range().start.column > 0;
+        const cleaned = cleanClapAttributeArgs(inner, removalPattern).trim();
 
-        if (isIndentedAttribute) {
-            let cleaned = stripAppSettings(inner, removalPattern)
-                .replace(/,\s*value_parser\b/g, "")
-                .replace(/\bvalue_parser\s*,\s*/g, "")
-                .replace(/,\s*action\b(?!\s*=)/g, "")
-                .replace(/\baction\s*,\s*(?!=)/g, "");
-
-            const trimmed = cleaned.trim();
-            if (trimmed === "" || trimmed === "value_parser" || trimmed === "action") {
-                edits.push(attribute.replace(""));
-                continue;
-            }
-
-            const replacement = /^subcommand$/.test(trimmed) || /^long_about\b/.test(trimmed)
-                ? `#[command(${trimmed})]`
-                : `#[arg(${trimmed})]`;
-            edits.push(attribute.replace(replacement));
+        if (isFieldLikeClapAttribute(attribute)) {
+            const target = cleaned === "subcommand" ? "command" : "arg";
+            edits.push(attribute.replace(`#[${target}(${cleaned})]`));
             continue;
         }
 
-        const cleaned = stripAppSettings(inner, removalPattern).trim();
         edits.push(attribute.replace(cleaned === "" ? "" : `#[command(${cleaned})]`));
     }
 
@@ -378,19 +310,45 @@ const PLACEHOLDER_METHODS: Record<string, string> = {
     number_of_values: "__codemod_num_args_exact",
 };
 
-function rewriteBuilderMethods(source: string): string {
+const CARDINALITY_METHODS = new Set(["num_args", ...Object.keys(PLACEHOLDER_METHODS)]);
+
+function isAppSettingsReference(text: string, appSettingsIdentifiers: string[]): boolean {
+    return appSettingsIdentifiers.some((identifier) => text.startsWith(`${identifier}::`));
+}
+
+function rewriteBuilderCalls(source: string, appSettingsIdentifiers: string[]): string {
     const parsed = parse("rust", source);
     const rootNode = parsed.root() as SgNode<Rust>;
     const edits: Edit[] = [];
 
     for (const call of rootNode.findAll({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) {
+        const receiver = call.getMatch("RECEIVER");
         const method = call.getMatch("METHOD");
         const args = call.getMultipleMatches("ARGS");
-        if (!method || args.length === 0) {
+        if (!receiver || !method || args.length === 0) {
             continue;
         }
 
         const methodName = method.text();
+        if (
+            methodName === "setting" &&
+            args.length === 1 &&
+            isAppSettingsReference(args[0].text(), appSettingsIdentifiers)
+        ) {
+            edits.push(call.replace(receiver.text()));
+            continue;
+        }
+
+        if (methodName === "takes_value" && args[0].text() === "false") {
+            edits.push(call.replace(receiver.text()));
+            continue;
+        }
+
+        if (methodName === "require_value_delimiter" && args[0].text() === "true") {
+            edits.push(call.replace(receiver.text()));
+            continue;
+        }
+
         if (!(methodName in PLACEHOLDER_METHODS)) {
             continue;
         }
@@ -412,6 +370,150 @@ function rewriteBuilderMethods(source: string): string {
             args[0].text() === "true"
         ) {
             edits.push(args[0].replace("1"));
+        }
+    }
+
+    return applyEdits(rootNode, edits);
+}
+
+function containsNode(outer: SgNode<Rust>, inner: SgNode<Rust>): boolean {
+    return (
+        outer.range().start.index <= inner.range().start.index &&
+        outer.range().end.index >= inner.range().end.index
+    );
+}
+
+function findOutermostReceiverChain(call: SgNode<Rust>): SgNode<Rust> {
+    let target = call;
+
+    for (const ancestor of call.ancestors()) {
+        if (!ancestor.matches({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) {
+            continue;
+        }
+
+        const receiver = ancestor.getMatch("RECEIVER");
+        if (receiver && containsNode(receiver as SgNode<Rust>, target)) {
+            target = ancestor as SgNode<Rust>;
+        }
+    }
+
+    return target;
+}
+
+function normalizeNumArgsChains(source: string): string {
+    const parsed = parse("rust", source);
+    const rootNode = parsed.root() as SgNode<Rust>;
+    const edits: Edit[] = [];
+    const seen = new Set<string>();
+
+    for (const call of rootNode.findAll({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) {
+        const method = call.getMatch("METHOD");
+        if (!method || !CARDINALITY_METHODS.has(method.text())) {
+            continue;
+        }
+
+        const chain = findOutermostReceiverChain(call as SgNode<Rust>);
+        const key = `${chain.range().start.index}:${chain.range().end.index}`;
+        if (seen.has(key)) {
+            continue;
+        }
+        seen.add(key);
+
+        const collapsed = collapseNumArgsChain(chain.text());
+        if (collapsed !== chain.text()) {
+            edits.push(chain.replace(collapsed));
+        }
+    }
+
+    return applyEdits(rootNode, edits);
+}
+
+function deduplicateErrorKindVariant(source: string, variant: string): string {
+    const pattern = new RegExp(`^\\s*(?:(?:clap::)?)ErrorKind::${variant}\\s*=>`);
+    const lines = source.split("\n");
+    const result: string[] = [];
+    let seen = false;
+
+    for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+
+        if (!pattern.test(line)) {
+            result.push(line);
+            continue;
+        }
+
+        if (!seen) {
+            seen = true;
+            result.push(line);
+            continue;
+        }
+
+        let depth = 0;
+        for (const ch of line) {
+            if (ch === "{") depth += 1;
+            if (ch === "}") depth -= 1;
+        }
+
+        while (depth > 0 && index + 1 < lines.length) {
+            index += 1;
+            for (const ch of lines[index]) {
+                if (ch === "{") depth += 1;
+                if (ch === "}") depth -= 1;
+            }
+        }
+    }
+
+    return result.join("\n");
+}
+
+function deduplicateErrorKindMatches(source: string): string {
+    const parsed = parse("rust", source);
+    const rootNode = parsed.root() as SgNode<Rust>;
+    const edits: Edit[] = [];
+
+    for (const matchExpression of rootNode.findAll({ rule: { kind: "match_expression" } })) {
+        let rewritten = matchExpression.text();
+        rewritten = deduplicateErrorKindVariant(rewritten, "InvalidValue");
+        rewritten = deduplicateErrorKindVariant(rewritten, "InvalidSubcommand");
+
+        if (rewritten !== matchExpression.text()) {
+            edits.push(matchExpression.replace(rewritten));
+        }
+    }
+
+    return applyEdits(rootNode, edits);
+}
+
+function rewriteClapImports(source: string): string {
+    const parsed = parse("rust", source);
+    const rootNode = parsed.root() as SgNode<Rust>;
+    const edits: Edit[] = [];
+
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use clap::AppSettings;" } })) {
+        edits.push(useStatement.replace(""));
+    }
+
+    for (const useStatement of rootNode.findAll({
+        rule: { pattern: "use clap::AppSettings as $ALIAS;" },
+    })) {
+        edits.push(useStatement.replace(""));
+    }
+
+    for (const useStatement of rootNode.findAll({ rule: { pattern: "use clap::{$$$ITEMS};" } })) {
+        const items = useStatement
+            .getMultipleMatches("ITEMS")
+            .map((itemNode) => itemNode.text().trim())
+            .filter((item) => item.length > 0);
+        const kept = items.filter(
+            (item) => splitAliasedImport(item).item !== "AppSettings",
+        );
+
+        if (kept.length !== items.length) {
+            edits.push(
+                useStatement.replace(
+                    kept.length === 0 ? "" : `use clap::{${kept.join(", ")}};`,
+                ),
+            );
         }
     }
 
@@ -444,6 +546,18 @@ function rewriteExactPatterns(source: string): string {
     return applyEdits(rootNode, edits);
 }
 
+function normalizeFormatting(source: string): string {
+    return source
+        .replace(/^\s*\n/, "")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n\s*\n(\s*\.[A-Za-z_][A-Za-z0-9_]*\()/g, "\n$1")
+        .replace(
+            /(\n\s*#\[[^\n]+\])\n\s*\n(\s*(?:pub\s+)?(?:struct|enum)\b)/g,
+            "$1\n$2",
+        )
+        .replace(/^\s*\n(?=\s*\n)/gm, "");
+}
+
 const transform: Transform<Rust> = async (root: any) => {
     let source = root.root().text();
 
@@ -451,39 +565,16 @@ const transform: Transform<Rust> = async (root: any) => {
         return source;
     }
 
-    const appSettingsIdentifiers = getAppSettingsIdentifiers(source);
+    const appSettingsIdentifiers = collectAppSettingsIdentifiers(source);
     const appSettingsRemovalPattern = createAppSettingsRemovalPattern(appSettingsIdentifiers);
 
     source = rewriteClapAttributes(source, appSettingsRemovalPattern);
-    source = source.replace(/^\s*\n(?=\s*\n)/gm, "");
-
-    source = rewriteBuilderMethods(source);
+    source = rewriteBuilderCalls(source, appSettingsIdentifiers);
     source = rewriteExactPatterns(source);
-
-    source = source.replace(/,\s*\btakes_value\s*=\s*(?:true|false)\b/g, "");
-    source = source.replace(/\btakes_value\s*=\s*(?:true|false)\b\s*,?\s*/g, "");
-
-    for (const method of ["takes_value(false)", "require_value_delimiter(true)"]) {
-        const escaped = escapeRegExp(method);
-        source = source.replace(new RegExp(`\\n\\s*\\.${escaped}`, "g"), "");
-        source = source.replace(new RegExp(`\\.${escaped}`, "g"), "");
-    }
-
-    for (const identifier of appSettingsIdentifiers) {
-        const escapedIdentifier = escapeRegExp(identifier);
-        const pattern = new RegExp(
-            `\\n?\\s*\\.setting\\(${escapedIdentifier}::[^)]+\\)`,
-            "g",
-        );
-        source = source.replace(pattern, "");
-    }
-
-    source = source.replace(/[ \t]+\n/g, "\n");
-    source = source.replace(/\n(\s*\n){2,}/g, "\n\n");
-
-    source = deduplicateErrorKindArms(source);
-    source = collapseNumArgsChains(source);
-    source = cleanupClapImports(source);
+    source = normalizeNumArgsChains(source);
+    source = deduplicateErrorKindMatches(source);
+    source = rewriteClapImports(source);
+    source = normalizeFormatting(source);
 
     return source;
 };
