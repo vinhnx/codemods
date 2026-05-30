@@ -3,6 +3,16 @@ on:
   push:
     tags:
       - "*@v*"
+  workflow_dispatch:
+    inputs:
+      codemod:
+        description: "Codemod slug to publish"
+        required: true
+        type: string
+      version:
+        description: "Version tag (e.g. v1.0.8)"
+        required: true
+        type: string
 
 permissions:
   id-token: write
@@ -17,8 +27,12 @@ jobs:
       - name: Extract codemod name from tag
         id: extract
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          CODEMOD_NAME="${TAG%@v*}"
+          if [ -n "${{ inputs.codemod }}" ]; then
+            CODEMOD_NAME="${{ inputs.codemod }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+            CODEMOD_NAME="${TAG%@v*}"
+          fi
           echo "codemod_name=$CODEMOD_NAME" >> $GITHUB_OUTPUT
 
       - name: Publish codemod
