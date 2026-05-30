@@ -1,6 +1,7 @@
 import { parse } from "codemod:ast-grep";
 import type { Edit, SgNode, Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
+import { applyEdits } from "../../../shared/utils";
 
 const ROUTE_METHOD_SUFFIXES = new Set([
     ".route",
@@ -13,8 +14,19 @@ const ROUTE_METHOD_SUFFIXES = new Set([
     "::nest_service",
 ]);
 
-function isLikelyAxumSource(source: string): boolean {
-    return /\baxum::|^\s*use\s+axum(?:::{1,2}|\s*[{;])/m.test(source);
+export function getSelector() {
+    return {
+        rule: {
+            any: [
+                { pattern: "use axum::$$$ITEMS" },
+                { pattern: "use axum::{$$$ITEMS}" },
+                { pattern: "$CALLEE.route($$$ARGS)" },
+                { pattern: "$CALLEE.nest($$$ARGS)" },
+                { pattern: "$CALLEE.route_service($$$ARGS)" },
+                { pattern: "$CALLEE.nest_service($$$ARGS)" },
+            ],
+        },
+    };
 }
 
 function transformRoutePath(path: string): string {
@@ -44,27 +56,7 @@ function rewriteStringLiteral(literal: string): string | null {
     return rewritten === raw[2] ? null : `r${raw[1]}"${rewritten}"${raw[1]}`;
 }
 
-function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
-    if (edits.length === 0) {
-        return rootNode.text();
-    }
-
-    const seen = new Set<string>();
-    const uniqueEdits = edits
-        .sort((left, right) => left.startPos - right.startPos || left.endPos - right.endPos)
-        .filter((edit) => {
-            const key = `${edit.startPos}:${edit.endPos}:${edit.insertedText}`;
-            if (seen.has(key)) {
-                return false;
-            }
-            seen.add(key);
-            return true;
-        });
-
-    return rootNode.commitEdits(uniqueEdits);
-}
-
-function rewriteAxumRouteCalls(source: string): string {
+function rewriteAxumRouteCalls(source: string): string | null {
     const parsed = parse("rust", source);
     const rootNode = parsed.root() as SgNode<Rust>;
     const edits: Edit[] = [];
@@ -88,14 +80,18 @@ function rewriteAxumRouteCalls(source: string): string {
         }
     }
 
+    if (edits.length === 0) {
+        return null;
+    }
+
     return applyEdits(rootNode, edits);
 }
 
 const transform: Transform<Rust> = async (root: any) => {
     const source = root.root().text();
 
-    if (!isLikelyAxumSource(source)) {
-        return source;
+    if (!/\baxum::|^\s*use\s+axum(?:::{1,2}|\s*[{;])/m.test(source)) {
+        return null;
     }
 
     return rewriteAxumRouteCalls(source);

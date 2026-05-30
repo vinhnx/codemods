@@ -1,32 +1,23 @@
 import { parse } from "codemod:ast-grep";
 import type { Edit, SgNode, Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
+import { applyEdits } from "../../../shared/utils";
 
 const CLIENT_PATH = "hyper_util::client::legacy::Client";
 const CONNECTOR_PATH = "hyper_util::client::legacy::connect::HttpConnector";
 
-function isLikelyHyperSource(source: string): boolean {
-    return /\bhyper::|^\s*use\s+hyper(?:::{1,2}|\s*[{;])/m.test(source);
-}
-
-function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
-    if (edits.length === 0) {
-        return rootNode.text();
-    }
-
-    const seen = new Set<string>();
-    const uniqueEdits = edits
-        .sort((left, right) => left.startPos - right.startPos || left.endPos - right.endPos)
-        .filter((edit) => {
-            const key = `${edit.startPos}:${edit.endPos}:${edit.insertedText}`;
-            if (seen.has(key)) {
-                return false;
-            }
-            seen.add(key);
-            return true;
-        });
-
-    return rootNode.commitEdits(uniqueEdits);
+export function getSelector() {
+    return {
+        rule: {
+            any: [
+                { pattern: "use hyper::Client" },
+                { pattern: "use hyper::client::HttpConnector" },
+                { pattern: "use hyper::{$$$ITEMS}" },
+                { pattern: "hyper::Client" },
+                { pattern: "hyper::client::HttpConnector" },
+            ],
+        },
+    };
 }
 
 function rewriteHyperUseStatements(source: string): string {
@@ -89,6 +80,9 @@ function rewriteHyperUseStatements(source: string): string {
 
         for (const item of useStatement.getMultipleMatches("ITEMS")) {
             const text = item.text().trim();
+            if (text.length === 0 || text === ",") {
+                continue;
+            }
             const clientMatch = text.match(/^Client(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?$/);
             if (clientMatch) {
                 lifted.push(`use ${CLIENT_PATH}${clientMatch[1] ? ` as ${clientMatch[1]}` : ""};`);
@@ -156,12 +150,13 @@ function rewriteHyperPaths(source: string): string {
 const transform: Transform<Rust> = async (root: any) => {
     const source = root.root().text();
 
-    if (!isLikelyHyperSource(source)) {
-        return source;
+    if (!/\bhyper::|^\s*use\s+hyper(?:::{1,2}|\s*[{;])/m.test(source)) {
+        return null;
     }
 
     const withUpdatedImports = rewriteHyperUseStatements(source);
-    return rewriteHyperPaths(withUpdatedImports);
+    const result = rewriteHyperPaths(withUpdatedImports);
+    return result === source ? null : result;
 };
 
 export default transform;

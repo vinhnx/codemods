@@ -1,8 +1,8 @@
 use ratatui::{CompletedFrame, Frame, Terminal, Viewport};
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Paragraph, Table, Row, Borders, List};
-use ratatui::widgets::TitlePosition;
 use ratatui::text::Line;
+use ratatui::widgets::TitlePosition;
 
 fn draw_main_ui(terminal: &mut Terminal<impl Backend>) -> std::io::Result<()> {
     terminal.draw(|frame| {
@@ -39,7 +39,7 @@ fn draw_main_ui(terminal: &mut Terminal<impl Backend>) -> std::io::Result<()> {
             .row_highlight_style(Style::new().reversed().fg(Color::Cyan));
         frame.render_widget(table, chunks[1]);
 
-        // Status bar with Line
+        // Status bar with Spans
         let status = Line::from(vec![
             Span::raw(" Mode: "),
             Span::styled("NORMAL", Style::new().green().bold()),

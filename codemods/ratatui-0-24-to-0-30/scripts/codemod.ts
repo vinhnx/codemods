@@ -1,29 +1,24 @@
 import { parse } from "codemod:ast-grep";
 import type { Edit, SgNode, Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
+import { applyEdits, splitAliasedImport, withAlias } from "../../../shared/utils";
 
-function isLikelyRatatuiSource(source: string): boolean {
-    return /\bratatui::|^\s*use\s+ratatui(?:::{1,2}|\s*[{;])/m.test(source);
-}
-
-function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
-    if (edits.length === 0) {
-        return rootNode.text();
-    }
-
-    const seen = new Set<string>();
-    const uniqueEdits = edits
-        .sort((left, right) => left.startPos - right.startPos || left.endPos - right.endPos)
-        .filter((edit) => {
-            const key = `${edit.startPos}:${edit.endPos}:${edit.insertedText}`;
-            if (seen.has(key)) {
-                return false;
-            }
-            seen.add(key);
-            return true;
-        });
-
-    return rootNode.commitEdits(uniqueEdits);
+export function getSelector() {
+    return {
+        rule: {
+            any: [
+                { pattern: "use ratatui::$$$ITEMS" },
+                { pattern: "use ratatui::{$$$ITEMS}" },
+                { pattern: "ratatui::terminal::$$$ITEMS" },
+                { pattern: "ratatui::widgets::block::$$$ITEMS" },
+                { pattern: "ratatui::widgets::scrollbar::$$$ITEMS" },
+                { pattern: "ratatui::text::Spans" },
+                { pattern: "$CALLEE.frame.size($$$ARGS)" },
+                { pattern: "Title::from($$$ARGS)" },
+                { pattern: "Title::new($$$ARGS)" },
+            ],
+        },
+    };
 }
 
 function formatReplacement(statement: SgNode<Rust>, lines: string[]): string {
@@ -32,25 +27,6 @@ function formatReplacement(statement: SgNode<Rust>, lines: string[]): string {
         .map((line, index) => (index === 0 ? line : `${indent}${line}`))
         .join("\n");
 }
-
-function splitAliasedImport(text: string): { item: string; alias: string | null } {
-    const match = text.match(/^(.*?)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/);
-    if (!match) {
-        return { item: text.trim(), alias: null };
-    }
-
-    return { item: match[1].trim(), alias: match[2] };
-}
-
-function withAlias(path: string, alias: string | null): string {
-    return alias ? `${path} as ${alias}` : path;
-}
-
-const SCROLLBAR_WIDGET_TYPES = new Set([
-    "Scrollbar",
-    "ScrollbarDirection",
-    "ScrollbarOrientation",
-]);
 
 function rewriteUseStatements(source: string): string {
     const parsed = parse("rust", source);
@@ -63,7 +39,7 @@ function rewriteUseStatements(source: string): string {
         const items = useStatement
             .getMultipleMatches("ITEMS")
             .map((item) => item.text().trim())
-            .filter((item) => item.length > 0);
+            .filter((item) => item.length > 0 && item !== ",");
         edits.push(useStatement.replace(`use ratatui::{${items.join(", ")}};`));
     }
 
@@ -85,7 +61,11 @@ function rewriteUseStatements(source: string): string {
         const extraLines: string[] = [];
 
         for (const itemNode of useStatement.getMultipleMatches("ITEMS")) {
-            const { item, alias } = splitAliasedImport(itemNode.text());
+            const text = itemNode.text().trim();
+            if (text.length === 0 || text === ",") {
+                continue;
+            }
+            const { item, alias } = splitAliasedImport(text);
 
             if (item === "Title") {
                 extraLines.push(`use ${withAlias("ratatui::text::Line", alias)};`);
@@ -145,17 +125,18 @@ function rewriteUseStatements(source: string): string {
         const lines: string[] = [];
 
         for (const itemNode of useStatement.getMultipleMatches("ITEMS")) {
-            const { item, alias } = splitAliasedImport(itemNode.text());
+            const text = itemNode.text().trim();
+            if (text.length === 0 || text === ",") {
+                continue;
+            }
+            const { item, alias } = splitAliasedImport(text);
 
             if (item === "Set") {
                 lines.push(`use ${withAlias("ratatui::symbols::scrollbar::Set", alias)};`);
                 continue;
             }
 
-            const path = SCROLLBAR_WIDGET_TYPES.has(item)
-                ? `ratatui::widgets::${item}`
-                : `ratatui::widgets::${item}`;
-            lines.push(`use ${withAlias(path, alias)};`);
+            lines.push(`use ${withAlias(`ratatui::widgets::${item}`, alias)};`);
         }
 
         edits.push(useStatement.replace(formatReplacement(useStatement, lines)));
@@ -197,7 +178,8 @@ function rewriteUseStatements(source: string): string {
                     return withAlias("Line", alias);
                 }
                 return withAlias(item, alias);
-            });
+            })
+            .filter((item) => item.length > 0 && item !== ",");
 
         if (items.some((item) => item.startsWith("Line"))) {
             edits.push(useStatement.replace(`use ratatui::text::{${items.join(", ")}};`));
@@ -257,9 +239,12 @@ function rewriteCallsAndIdentifiers(source: string): string {
             continue;
         }
 
-        if (calleeText === "Buffer::filled" && args[1] && /^&\s*Cell::/.test(args[1].text())) {
-            edits.push(args[1].replace(args[1].text().slice(1)));
-            continue;
+        if (calleeText === "Buffer::filled") {
+            const realArgs = args.filter((a) => a.text() !== ",");
+            if (realArgs[1] && /^&\s*Cell::/.test(realArgs[1].text())) {
+                edits.push(realArgs[1].replace(realArgs[1].text().slice(1)));
+                continue;
+            }
         }
 
         if (calleeText.endsWith(".inner") && args[0] && /^&\s*Margin\b/.test(args[0].text())) {
@@ -285,11 +270,23 @@ function rewriteCallsAndIdentifiers(source: string): string {
         edits.push(node.replace("TitlePosition::Top"));
     }
 
-    for (const node of rootNode.findAll({ rule: { pattern: "symbols::line::Set" } })) {
+    for (const node of rootNode.findAll({
+        rule: { kind: "scoped_type_identifier", regex: "ratatui::symbols::line::Set$" },
+    })) {
+        edits.push(node.replace("ratatui::symbols::border::Set"));
+    }
+
+    for (const node of rootNode.findAll({
+        rule: { kind: "scoped_type_identifier", regex: "symbols::line::Set$" },
+    })) {
         edits.push(node.replace("symbols::border::Set"));
     }
 
     for (const node of rootNode.findAll({ rule: { pattern: "Spans" } })) {
+        edits.push(node.replace("Line"));
+    }
+
+    for (const node of rootNode.findAll({ rule: { kind: "type_identifier", regex: "^Spans$" } })) {
         edits.push(node.replace("Line"));
     }
 
@@ -325,11 +322,12 @@ function migrateRatatuiSource(source: string): string {
 const transform: Transform<Rust> = async (root: any) => {
     const source = root.root().text();
 
-    if (!isLikelyRatatuiSource(source)) {
-        return source;
+    if (!/\bratatui::|^\s*use\s+ratatui(?:::{1,2}|\s*[{;])/m.test(source)) {
+        return null;
     }
 
-    return migrateRatatuiSource(source);
+    const result = migrateRatatuiSource(source);
+    return result === source ? null : result;
 };
 
 export default transform;

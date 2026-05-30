@@ -1,10 +1,10 @@
 use ratatui::prelude::*;
 
 fn ui(frame: &mut Frame) {
-    // frame.area() should become .area()
+    // frame.size() should become .area()
     let area = frame.area();
 
-    // terminal.area() should become .area() when used in draw closures
+    // terminal.size() should become .area() when used in draw closures
     let other_area = terminal.area();
 
     // vec.size() and similar should NOT be renamed

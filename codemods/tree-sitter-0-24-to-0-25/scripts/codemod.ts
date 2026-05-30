@@ -1,28 +1,18 @@
+import { parse } from "codemod:ast-grep";
 import type { Edit, SgNode, Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
+import { applyEdits } from "../../../shared/utils";
 
-function isLikelyTreeSitterSource(source: string): boolean {
-    return /\btree_sitter::|^\s*use\s+tree_sitter(?:::{1,2}|\s*[{;])/m.test(source);
-}
-
-function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
-    if (edits.length === 0) {
-        return rootNode.text();
-    }
-
-    const seen = new Set<string>();
-    const uniqueEdits = edits
-        .sort((left, right) => left.startPos - right.startPos || left.endPos - right.endPos)
-        .filter((edit) => {
-            const key = `${edit.startPos}:${edit.endPos}:${edit.insertedText}`;
-            if (seen.has(key)) {
-                return false;
-            }
-            seen.add(key);
-            return true;
-        });
-
-    return rootNode.commitEdits(uniqueEdits);
+export function getSelector() {
+    return {
+        rule: {
+            any: [
+                { pattern: "ts_node_child_containing_descendant" },
+                { pattern: "$RECEIVER.child_containing_descendant($$$ARGS)" },
+                { pattern: "Node::child_containing_descendant($$$ARGS)" },
+            ],
+        },
+    };
 }
 
 function migrateRustSource(rootNode: SgNode<Rust>): string {
@@ -55,11 +45,12 @@ const transform: Transform<Rust> = async (root: any) => {
     const rootNode = root.root() as SgNode<Rust>;
     const source = rootNode.text();
 
-    if (!isLikelyTreeSitterSource(source)) {
-        return source;
+    if (!/\btree_sitter::|^\s*use\s+tree_sitter(?:::{1,2}|\s*[{;])/m.test(source)) {
+        return null;
     }
 
-    return migrateRustSource(rootNode);
+    const result = migrateRustSource(rootNode);
+    return result === source ? null : result;
 };
 
 export default transform;

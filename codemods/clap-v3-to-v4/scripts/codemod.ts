@@ -1,22 +1,29 @@
 import { parse } from "codemod:ast-grep";
 import type { Edit, SgNode, Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
+import { applyEdits, splitAliasedImport } from "../../../shared/utils";
 
-function isLikelyClapSource(source: string): boolean {
-    return /\bclap::|^\s*use\s+clap(?:::{1,2}|\s*[{;])/m.test(source);
+export function getSelector() {
+    return {
+        rule: {
+            any: [
+                { pattern: "use clap::$$$ITEMS" },
+                { pattern: "use clap::{$$$ITEMS}" },
+                { pattern: "#[clap($$$ARGS)]" },
+                { pattern: "$RECEIVER.takes_value($$$ARGS)" },
+                { pattern: "$RECEIVER.multiple_values($$$ARGS)" },
+                { pattern: "$RECEIVER.min_values($$$ARGS)" },
+                { pattern: "$RECEIVER.max_values($$$ARGS)" },
+                { pattern: "$RECEIVER.number_of_values($$$ARGS)" },
+                { pattern: "ErrorKind::EmptyValue" },
+                { pattern: "ErrorKind::UnrecognizedSubcommand" },
+            ],
+        },
+    };
 }
 
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function splitAliasedImport(text: string): { item: string; alias: string | null } {
-    const match = text.match(/^(.*?)\s+as\s+([A-Za-z_][A-Za-z0-9_]*)$/);
-    if (!match) {
-        return { item: text.trim(), alias: null };
-    }
-
-    return { item: match[1].trim(), alias: match[2] };
 }
 
 function collectAppSettingsIdentifiers(source: string): string[] {
@@ -221,26 +228,6 @@ function collapseNumArgsChain(chain: string): string {
     return rebuiltLines.join("\n");
 }
 
-function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
-    if (edits.length === 0) {
-        return rootNode.text();
-    }
-
-    const seen = new Set<string>();
-    const uniqueEdits = edits
-        .sort((left, right) => left.startPos - right.startPos || left.endPos - right.endPos)
-        .filter((edit) => {
-            const key = `${edit.startPos}:${edit.endPos}:${edit.insertedText}`;
-            if (seen.has(key)) {
-                return false;
-            }
-            seen.add(key);
-            return true;
-        });
-
-    return rootNode.commitEdits(uniqueEdits);
-}
-
 function createAppSettingsRemovalPattern(appSettingsIdentifiers: string[]): RegExp | null {
     if (appSettingsIdentifiers.length === 0) {
         return null;
@@ -276,7 +263,8 @@ function cleanClapAttributeArgs(attrs: string, removalPattern: RegExp | null): s
 }
 
 function isFieldLikeClapAttribute(attribute: SgNode<Rust>): boolean {
-    return attribute.inside({ rule: { kind: "field_declaration" } });
+    const parent = attribute.parent();
+    return parent?.kind() === "field_declaration_list";
 }
 
 function rewriteClapAttributes(source: string, removalPattern: RegExp | null): string {
@@ -320,6 +308,7 @@ function rewriteBuilderCalls(source: string, appSettingsIdentifiers: string[]): 
     const parsed = parse("rust", source);
     const rootNode = parsed.root() as SgNode<Rust>;
     const edits: Edit[] = [];
+    const processedChains = new Set<string>();
 
     for (const call of rootNode.findAll({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) {
         const receiver = call.getMatch("RECEIVER");
@@ -330,46 +319,70 @@ function rewriteBuilderCalls(source: string, appSettingsIdentifiers: string[]): 
         }
 
         const methodName = method.text();
-        if (
-            methodName === "setting" &&
-            args.length === 1 &&
-            isAppSettingsReference(args[0].text(), appSettingsIdentifiers)
-        ) {
-            edits.push(call.replace(receiver.text()));
+
+        const isRemoveMethod =
+            (methodName === "setting" &&
+                args.length === 1 &&
+                isAppSettingsReference(args[0].text(), appSettingsIdentifiers)) ||
+            (methodName === "takes_value" && args[0].text() === "false") ||
+            (methodName === "require_value_delimiter" && args[0].text() === "true");
+
+        const isCardinalityMethod = methodName in PLACEHOLDER_METHODS;
+
+        if (!isRemoveMethod && !isCardinalityMethod) {
             continue;
         }
 
-        if (methodName === "takes_value" && args[0].text() === "false") {
-            edits.push(call.replace(receiver.text()));
-            continue;
+        if (isCardinalityMethod) {
+            if (
+                (methodName === "takes_value" ||
+                    methodName === "multiple_values" ||
+                    methodName === "multiple") &&
+                args[0].text() !== "true"
+            ) {
+                continue;
+            }
         }
 
-        if (methodName === "require_value_delimiter" && args[0].text() === "true") {
-            edits.push(call.replace(receiver.text()));
+        const chainStart = call.range().start.index;
+        const chainKey = `${chainStart}`;
+        if (processedChains.has(chainKey)) {
             continue;
         }
+        processedChains.add(chainKey);
 
-        if (!(methodName in PLACEHOLDER_METHODS)) {
-            continue;
+        let target: SgNode<Rust> = call;
+        for (const ancestor of call.ancestors()) {
+            if (!ancestor.matches({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) {
+                continue;
+            }
+            const ancReceiver = ancestor.getMatch("RECEIVER");
+            if (ancReceiver && containsNode(ancReceiver as SgNode<Rust>, target)) {
+                target = ancestor as SgNode<Rust>;
+            }
         }
 
-        if (
-            (methodName === "takes_value" ||
-                methodName === "multiple_values" ||
-                methodName === "multiple") &&
-            args[0].text() !== "true"
-        ) {
-            continue;
-        }
+        let chainText = target.text();
 
-        edits.push(method.replace(PLACEHOLDER_METHODS[methodName]));
-        if (
-            (methodName === "takes_value" ||
-                methodName === "multiple_values" ||
-                methodName === "multiple") &&
-            args[0].text() === "true"
-        ) {
-            edits.push(args[0].replace("1"));
+        for (const id of appSettingsIdentifiers) {
+            const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            chainText = chainText.replace(new RegExp(`\\.setting\\(${escaped}::[^)]+\\)`, "g"), "");
+        }
+        chainText = chainText.replace(/\.takes_value\(false\)/g, "");
+        chainText = chainText.replace(/\.require_value_delimiter\(true\)/g, "");
+        chainText = chainText.replace(/\.takes_value\(true\)/g, ".__codemod_num_args_min(1)");
+        chainText = chainText.replace(/\.multiple_values\(true\)/g, ".__codemod_num_args_min(1)");
+        chainText = chainText.replace(/\.multiple\(true\)/g, ".__codemod_num_args_min(1)");
+        chainText = chainText.replace(/\.min_values\((\d+)\)/g, ".__codemod_num_args_min($1)");
+        chainText = chainText.replace(/\.max_values\((\d+)\)/g, ".__codemod_num_args_max($1)");
+        chainText = chainText.replace(/\.number_of_values\((\d+)\)/g, ".__codemod_num_args_exact($1)");
+
+        chainText = chainText.replace(/\.\s*\./g, ".");
+
+        chainText = collapseNumArgsChain(chainText);
+
+        if (chainText !== target.text()) {
+            edits.push(target.replace(chainText));
         }
     }
 
@@ -383,45 +396,53 @@ function containsNode(outer: SgNode<Rust>, inner: SgNode<Rust>): boolean {
     );
 }
 
-function findOutermostReceiverChain(call: SgNode<Rust>): SgNode<Rust> {
-    let target = call;
-
-    for (const ancestor of call.ancestors()) {
-        if (!ancestor.matches({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) {
-            continue;
-        }
-
-        const receiver = ancestor.getMatch("RECEIVER");
-        if (receiver && containsNode(receiver as SgNode<Rust>, target)) {
-            target = ancestor as SgNode<Rust>;
-        }
-    }
-
-    return target;
-}
-
 function normalizeNumArgsChains(source: string): string {
     const parsed = parse("rust", source);
     const rootNode = parsed.root() as SgNode<Rust>;
     const edits: Edit[] = [];
     const seen = new Set<string>();
 
-    for (const call of rootNode.findAll({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) {
-        const method = call.getMatch("METHOD");
-        if (!method || !CARDINALITY_METHODS.has(method.text())) {
-            continue;
+    const cardinalityCalls = rootNode.findAll({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })
+        .filter((call) => {
+            const method = call.getMatch("METHOD");
+            return method && CARDINALITY_METHODS.has(method.text());
+        });
+
+    const chainStarts = new Map<number, Array<{ call: SgNode<Rust>; end: number }>>();
+    for (const call of cardinalityCalls) {
+        const start = call.range().start.index;
+        const end = call.range().end.index;
+        if (!chainStarts.has(start)) {
+            chainStarts.set(start, []);
+        }
+        chainStarts.get(start)!.push({ call, end });
+    }
+
+    for (const [, entries] of chainStarts) {
+        let maxEnd = 0;
+        for (const entry of entries) {
+            if (entry.end > maxEnd) maxEnd = entry.end;
         }
 
-        const chain = findOutermostReceiverChain(call as SgNode<Rust>);
-        const key = `${chain.range().start.index}:${chain.range().end.index}`;
-        if (seen.has(key)) {
-            continue;
+        const outerEntry = entries.find((e) => e.end === maxEnd);
+        if (!outerEntry) continue;
+
+        let target: SgNode<Rust> = outerEntry.call;
+        for (const ancestor of outerEntry.call.ancestors()) {
+            if (!ancestor.matches({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) continue;
+            const receiver = ancestor.getMatch("RECEIVER");
+            if (receiver && containsNode(receiver as SgNode<Rust>, target)) {
+                target = ancestor as SgNode<Rust>;
+            }
         }
+
+        const key = `${target.range().start.index}:${target.range().end.index}`;
+        if (seen.has(key)) continue;
         seen.add(key);
 
-        const collapsed = collapseNumArgsChain(chain.text());
-        if (collapsed !== chain.text()) {
-            edits.push(chain.replace(collapsed));
+        const collapsed = collapseNumArgsChain(target.text());
+        if (collapsed !== target.text()) {
+            edits.push(target.replace(collapsed));
         }
     }
 
@@ -503,7 +524,7 @@ function rewriteClapImports(source: string): string {
         const items = useStatement
             .getMultipleMatches("ITEMS")
             .map((itemNode) => itemNode.text().trim())
-            .filter((item) => item.length > 0);
+            .filter((item) => item.length > 0 && item !== ",");
         const kept = items.filter(
             (item) => splitAliasedImport(item).item !== "AppSettings",
         );
@@ -561,22 +582,22 @@ function normalizeFormatting(source: string): string {
 const transform: Transform<Rust> = async (root: any) => {
     let source = root.root().text();
 
-    if (!isLikelyClapSource(source)) {
-        return source;
+    if (!/\bclap::|^\s*use\s+clap(?:::{1,2}|\s*[{;])/m.test(source)) {
+        return null;
     }
 
+    const original = source;
     const appSettingsIdentifiers = collectAppSettingsIdentifiers(source);
     const appSettingsRemovalPattern = createAppSettingsRemovalPattern(appSettingsIdentifiers);
 
     source = rewriteClapAttributes(source, appSettingsRemovalPattern);
     source = rewriteBuilderCalls(source, appSettingsIdentifiers);
     source = rewriteExactPatterns(source);
-    source = normalizeNumArgsChains(source);
     source = deduplicateErrorKindMatches(source);
     source = rewriteClapImports(source);
     source = normalizeFormatting(source);
 
-    return source;
+    return source === original ? null : source;
 };
 
 export default transform;

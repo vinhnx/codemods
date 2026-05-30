@@ -1,29 +1,23 @@
 import { parse } from "codemod:ast-grep";
 import type { Edit, SgNode, Transform } from "codemod:ast-grep";
 import type Rust from "codemod:ast-grep/langs/rust";
+import { applyEdits } from "../../../shared/utils";
 
-function isLikelyRandSource(source: string): boolean {
-    return /\brand::|^\s*use\s+rand(?:::{1,2}|\s*[{;])/m.test(source);
-}
-
-function applyEdits(rootNode: SgNode<Rust>, edits: Edit[]): string {
-    if (edits.length === 0) {
-        return rootNode.text();
-    }
-
-    const seen = new Set<string>();
-    const uniqueEdits = edits
-        .sort((left, right) => left.startPos - right.startPos || left.endPos - right.endPos)
-        .filter((edit) => {
-            const key = `${edit.startPos}:${edit.endPos}:${edit.insertedText}`;
-            if (seen.has(key)) {
-                return false;
-            }
-            seen.add(key);
-            return true;
-        });
-
-    return rootNode.commitEdits(uniqueEdits);
+export function getSelector() {
+    return {
+        rule: {
+            any: [
+                { pattern: "use rand::thread_rng" },
+                { pattern: "use rand::{$$$ITEMS}" },
+                { pattern: "$RECEIVER.gen($$$ARGS)" },
+                { pattern: "$RECEIVER.gen_range($$$ARGS)" },
+                { pattern: "$RECEIVER.gen_bool($$$ARGS)" },
+                { pattern: "$RECEIVER.gen_ratio($$$ARGS)" },
+                { pattern: "Rng::gen($$$ARGS)" },
+                { pattern: "thread_rng()" },
+            ],
+        },
+    };
 }
 
 function rewriteRandUseStatements(source: string): string {
@@ -50,7 +44,7 @@ function rewriteRandUseStatements(source: string): string {
         const items = useStatement
             .getMultipleMatches("ITEMS")
             .map((item) => item.text().trim())
-            .filter((item) => item.length > 0);
+            .filter((item) => item.length > 0 && item !== ",");
 
         let changed = false;
         const rewrittenItems = items.map((item) => {
@@ -93,39 +87,23 @@ function rewriteRandCalls(source: string): string {
     const rootNode = parsed.root() as SgNode<Rust>;
     const edits: Edit[] = [];
 
-    for (const call of rootNode.findAll({ rule: { pattern: "$RECEIVER.$METHOD($$$ARGS)" } })) {
-        const method = call.getMatch("METHOD");
-        if (!method) {
-            continue;
-        }
+    const RENAMED_METHOD_PATTERNS = [
+        "$RECEIVER.$METHOD($$$ARGS)",
+        "Rng::$METHOD($$$ARGS)",
+        "rand::Rng::$METHOD($$$ARGS)",
+    ];
 
-        const renamed = renameMethod(method.text());
-        if (renamed) {
-            edits.push(method.replace(renamed));
-        }
-    }
+    for (const pattern of RENAMED_METHOD_PATTERNS) {
+        for (const call of rootNode.findAll({ rule: { pattern } })) {
+            const method = call.getMatch("METHOD");
+            if (!method) {
+                continue;
+            }
 
-    for (const call of rootNode.findAll({ rule: { pattern: "Rng::$METHOD($$$ARGS)" } })) {
-        const method = call.getMatch("METHOD");
-        if (!method) {
-            continue;
-        }
-
-        const renamed = renameMethod(method.text());
-        if (renamed) {
-            edits.push(method.replace(renamed));
-        }
-    }
-
-    for (const call of rootNode.findAll({ rule: { pattern: "rand::Rng::$METHOD($$$ARGS)" } })) {
-        const method = call.getMatch("METHOD");
-        if (!method) {
-            continue;
-        }
-
-        const renamed = renameMethod(method.text());
-        if (renamed) {
-            edits.push(method.replace(renamed));
+            const renamed = renameMethod(method.text());
+            if (renamed) {
+                edits.push(method.replace(renamed));
+            }
         }
     }
 
@@ -145,24 +123,18 @@ function rewriteRandCalls(source: string): string {
         }
     }
 
-    for (const call of rootNode.findAll({ rule: { pattern: "$RECEIVER.$METHOD::<$$$GENERIC_ARGS>($$$ARGS)" } })) {
-        const method = call.getMatch("METHOD");
-        if (method && method.text() === "gen") {
-            edits.push(method.replace("random"));
-        }
-    }
+    const GENERIC_PATTERNS = [
+        "$RECEIVER.$METHOD::<$$$GENERIC_ARGS>($$$ARGS)",
+        "Rng::$METHOD::<$$$GENERIC_ARGS>($$$ARGS)",
+        "rand::Rng::$METHOD::<$$$GENERIC_ARGS>($$$ARGS)",
+    ];
 
-    for (const call of rootNode.findAll({ rule: { pattern: "Rng::$METHOD::<$$$GENERIC_ARGS>($$$ARGS)" } })) {
-        const method = call.getMatch("METHOD");
-        if (method && method.text() === "gen") {
-            edits.push(method.replace("random"));
-        }
-    }
-
-    for (const call of rootNode.findAll({ rule: { pattern: "rand::Rng::$METHOD::<$$$GENERIC_ARGS>($$$ARGS)" } })) {
-        const method = call.getMatch("METHOD");
-        if (method && method.text() === "gen") {
-            edits.push(method.replace("random"));
+    for (const pattern of GENERIC_PATTERNS) {
+        for (const call of rootNode.findAll({ rule: { pattern } })) {
+            const method = call.getMatch("METHOD");
+            if (method && method.text() === "gen") {
+                edits.push(method.replace("random"));
+            }
         }
     }
 
@@ -172,12 +144,13 @@ function rewriteRandCalls(source: string): string {
 const transform: Transform<Rust> = async (root: any) => {
     const source = root.root().text();
 
-    if (!isLikelyRandSource(source)) {
-        return source;
+    if (!/\brand::|^\s*use\s+rand(?:::{1,2}|\s*[{;])/m.test(source)) {
+        return null;
     }
 
     const withUpdatedImports = rewriteRandUseStatements(source);
-    return rewriteRandCalls(withUpdatedImports);
+    const result = rewriteRandCalls(withUpdatedImports);
+    return result === source ? null : result;
 };
 
 export default transform;
