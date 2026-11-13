@@ -1,0 +1,6 @@
+[package]
+rust-version.workspace = true
+[package.metadata]
+rust-version = "1.99.1"
+[workspace.package]
+rust-version = "1.99.0"

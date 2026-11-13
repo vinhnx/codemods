@@ -1,0 +1,13 @@
+{
+  "name": "rust-1-99-1-to-1-100-0",
+  "version": "0.1.0",
+  "description": "Migrate selected Rust 1.99.1 toolchain pins and Clippy guards to Rust 1.100.0",
+  "author": "Vinh Nguyen <vinhnguyen2308@gmail.com>",
+  "main": "scripts/codemod.ts",
+  "scripts": {
+    "test": "npx --yes codemod@latest jssg test -l rust ./scripts/codemod.ts && npx --yes codemod@latest jssg test -l toml ./scripts/toolchain.ts ./tests-toml/toolchain && npx --yes codemod@latest jssg test -l toml ./scripts/cargo.ts ./tests-toml/cargo && npx --yes codemod@latest jssg test -l toml ./scripts/clippy.ts ./tests-toml/clippy"
+  },
+  "dependencies": {
+    "codemod:ast-grep": "latest"
+  }
+}

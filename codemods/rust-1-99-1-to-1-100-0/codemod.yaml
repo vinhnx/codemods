@@ -1,0 +1,14 @@
+schema_version: "1.0"
+name: "rust-1-99-1-to-1-100-0"
+version: "0.1.0"
+description: "Migrate selected Rust 1.99.1 pins and boolean guards to Rust 1.100.0"
+author: "Vinh Nguyen <vinhnguyen2308@gmail.com>"
+license: "MIT"
+workflow: "workflow.yaml"
+targets:
+  languages: ["rust", "toml"]
+keywords: ["rust", "migration", "clippy", "1.100"]
+registry:
+  access: "public"
+  visibility: "public"
+capabilities: []

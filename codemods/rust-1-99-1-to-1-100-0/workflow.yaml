@@ -1,0 +1,29 @@
+version: "1"
+nodes:
+  - id: rust-1-100
+    name: Migrate selected Rust 1.100 pins and guards
+    type: automatic
+    steps:
+      - name: Update rust-toolchain.toml
+        js-ast-grep:
+          js_file: scripts/toolchain.ts
+          language: toml
+          include: ["**/rust-toolchain.toml"]
+          exclude: ["**/target/**", "**/vendor/**", "**/tests/**", "**/fixtures/**"]
+      - name: Update Cargo.toml rust-version
+        js-ast-grep:
+          js_file: scripts/cargo.ts
+          language: toml
+          include: ["**/Cargo.toml"]
+          exclude: ["**/target/**", "**/vendor/**", "**/tests/**", "**/fixtures/**"]
+      - name: Update clippy.toml msrv
+        js-ast-grep:
+          js_file: scripts/clippy.ts
+          language: toml
+          include: ["**/clippy.toml"]
+          exclude: ["**/target/**", "**/vendor/**", "**/tests/**", "**/fixtures/**"]
+      - name: Simplify terminal boolean guards
+        js-ast-grep:
+          js_file: scripts/codemod.ts
+          language: rust
+          exclude: ["**/target/**", "**/vendor/**", "**/tests/**", "**/fixtures/**"]

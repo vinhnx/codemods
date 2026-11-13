@@ -14,6 +14,7 @@ Open [Codemod registry](https://app.codemod.com/registry) and search for:
 | `rand-0-8-to-0-9`          | `rand` v0.8 → v0.9 (`thread_rng` → `rng`, `gen*` → `random*`)       | [registry](https://app.codemod.com/registry/rand-0-8-to-0-9)          |
 | `tree-sitter-0-24-to-0-25` | `tree-sitter` v0.24 → v0.25 (`child_containing_descendant` renames) | [registry](https://app.codemod.com/registry/tree-sitter-0-24-to-0-25) |
 | `ratatui-0-24-to-0-30`    | `ratatui` v0.24–v0.30 (`Frame::size`→`area`, `Spans`→`Line`, etc.)  | [registry](https://app.codemod.com/registry/ratatui-0-24-to-0-30)    |
+| `rust-1-99-1-to-1-100-0` | Rust 1.99.1 → 1.100.0 selected pins and Clippy boolean guards; other steps are manual | [registry](https://app.codemod.com/registry/rust-1-99-1-to-1-100-0) |
 
 ### Run from registry
 

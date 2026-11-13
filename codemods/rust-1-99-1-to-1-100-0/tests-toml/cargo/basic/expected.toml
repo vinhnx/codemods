@@ -1,0 +1,4 @@
+[package]
+rust-version = "1.100.0"
+[workspace.package]
+rust-version = '1.100.0'
